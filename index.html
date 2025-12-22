@@ -1,24 +1,41 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
-    <title>Lovable App</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
-
-    <!-- TODO: Update og:title to match your application name -->
-    <meta property="og:title" content="Lovable App" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <title>Humbri - Nepal's #1 Booking Platform | Hotels, Resorts & Unique Stays</title>
+    <meta name="description" content="Discover and book the best hotels, resorts, and unique accommodations across Nepal. Verified properties, flexible booking options, and best price guarantee." />
+    <meta name="keywords" content="Nepal hotels, Pokhara resorts, Kathmandu accommodation, Nepal booking, hotel booking Nepal" />
+    <link rel="canonical" href="https://humbri.com" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Humbri - Nepal's #1 Booking Platform" />
+    <meta property="og:description" content="Discover and book the best hotels, resorts, and unique stays across Nepal." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:title" content="Humbri - Nepal's #1 Booking Platform" />
+    <meta name="twitter:description" content="Discover and book the best hotels, resorts, and unique stays across Nepal." />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Humbri",
+      "url": "https://humbri.com",
+      "description": "Nepal's premier platform for booking hotels, resorts, and unique accommodations",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://humbri.com/properties?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
   </head>
-
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
