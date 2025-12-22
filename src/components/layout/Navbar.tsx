@@ -8,10 +8,10 @@ const Navbar = () => {
   const location = useLocation();
 
   const navLinks = [
-    { href: "/", label: "Home" },
-    { href: "/properties", label: "Properties" },
-    { href: "/about", label: "About" },
-    { href: "/contact", label: "Contact" },
+    { href: "/properties?type=hourly", label: "Hourly" },
+    { href: "/properties?type=daycation", label: "Daycation" },
+    { href: "/properties?type=fullstay", label: "Full Stay" },
+    { href: "/properties?type=vibe", label: "Vibe & Chill" },
   ];
 
   const isActive = (path: string) => location.pathname === path;

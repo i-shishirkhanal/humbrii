@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/Navbar";
@@ -7,14 +8,17 @@ import {
   Search,
   MapPin,
   Calendar,
+  Clock,
   Users,
   Shield,
-  Clock,
   Heart,
-  Star,
   ArrowRight,
   Building2,
   Sparkles,
+  Sun,
+  Moon,
+  Zap,
+  Map,
 } from "lucide-react";
 
 const featuredProperties = [
@@ -71,7 +75,16 @@ const features = [
   },
 ];
 
+const bookingTypes = [
+  { id: "hourly", label: "Hourly", icon: Clock },
+  { id: "daycation", label: "Daycation", icon: Sun },
+  { id: "fullstay", label: "Full Stay", icon: Moon },
+  { id: "vibe", label: "Vibe & Chill", icon: Zap },
+];
+
 const Index = () => {
+  const [activeBookingType, setActiveBookingType] = useState("daycation");
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -83,7 +96,7 @@ const Index = () => {
         <div className="absolute bottom-10 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
 
         <div className="container mx-auto px-4 relative">
-          <div className="max-w-3xl mx-auto text-center">
+          <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-primary text-sm font-medium mb-6 animate-fade-up">
               <Sparkles className="w-4 h-4" />
               Nepal's #1 Booking Platform
@@ -99,37 +112,111 @@ const Index = () => {
               Book with confidence and create unforgettable memories.
             </p>
 
-            {/* Search Box */}
-            <div className="mt-10 p-4 bg-card rounded-2xl shadow-strong border border-border animate-fade-up" style={{ animationDelay: "0.3s" }}>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Where are you going?"
-                    className="w-full pl-10 pr-4 py-3 bg-muted rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
+            {/* Booking Type Tabs */}
+            <div className="mt-10 flex justify-center animate-fade-up" style={{ animationDelay: "0.25s" }}>
+              <div className="inline-flex items-center gap-1 p-1.5 bg-secondary/80 backdrop-blur-sm rounded-full border border-border">
+                {bookingTypes.map((type) => {
+                  const Icon = type.icon;
+                  const isActive = activeBookingType === type.id;
+                  return (
+                    <button
+                      key={type.id}
+                      onClick={() => setActiveBookingType(type.id)}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-lg"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {type.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Search Widget */}
+            <div className="mt-6 animate-fade-up" style={{ animationDelay: "0.3s" }}>
+              <div className="bg-secondary/80 backdrop-blur-sm rounded-2xl border border-border p-2 md:p-3">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
+                  {/* Location */}
+                  <div className="flex-1 bg-card rounded-xl px-4 py-3 flex items-center gap-3 border border-transparent hover:border-primary/30 transition-colors">
+                    <div className="flex flex-col items-start flex-1">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Location</span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <MapPin className="w-4 h-4 text-primary" />
+                        <input
+                          type="text"
+                          placeholder="Kathmandu"
+                          className="bg-transparent text-sm font-medium text-foreground placeholder:text-foreground focus:outline-none w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="hidden md:block w-px h-10 bg-border" />
+
+                  {/* Date */}
+                  <div className="flex-1 bg-card rounded-xl px-4 py-3 flex items-center gap-3 border border-transparent hover:border-primary/30 transition-colors">
+                    <div className="flex flex-col items-start flex-1">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Date</span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <Calendar className="w-4 h-4 text-primary" />
+                        <input
+                          type="text"
+                          placeholder="Today"
+                          className="bg-transparent text-sm font-medium text-foreground placeholder:text-foreground focus:outline-none w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="hidden md:block w-px h-10 bg-border" />
+
+                  {/* Time */}
+                  <div className="flex-1 bg-card rounded-xl px-4 py-3 flex items-center gap-3 border border-transparent hover:border-primary/30 transition-colors">
+                    <div className="flex flex-col items-start flex-1">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Time</span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <Clock className="w-4 h-4 text-primary" />
+                        <input
+                          type="text"
+                          placeholder="10 AM - 6 PM"
+                          className="bg-transparent text-sm font-medium text-foreground placeholder:text-foreground focus:outline-none w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="hidden md:block w-px h-10 bg-border" />
+
+                  {/* Guests */}
+                  <div className="flex-1 bg-card rounded-xl px-4 py-3 flex items-center gap-3 border border-transparent hover:border-primary/30 transition-colors">
+                    <div className="flex flex-col items-start flex-1">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Guests</span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <Users className="w-4 h-4 text-primary" />
+                        <input
+                          type="text"
+                          placeholder="2 Guests"
+                          className="bg-transparent text-sm font-medium text-foreground placeholder:text-foreground focus:outline-none w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2">
+                    <button className="p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors">
+                      <Map className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                    <Button size="lg" className="h-12 w-12 md:w-auto md:px-6 rounded-xl">
+                      <Search className="w-5 h-5" />
+                      <span className="hidden md:inline ml-2">Search</span>
+                    </Button>
+                  </div>
                 </div>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Check-in - Check-out"
-                    className="w-full pl-10 pr-4 py-3 bg-muted rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-                <div className="relative">
-                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Guests"
-                    className="w-full pl-10 pr-4 py-3 bg-muted rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-                <Button size="lg" className="h-auto py-3">
-                  <Search className="w-5 h-5 mr-2" />
-                  Search
-                </Button>
               </div>
             </div>
 
