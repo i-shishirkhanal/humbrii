@@ -3,9 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import PropertyCard from "@/components/cards/PropertyCard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, SlidersHorizontal, MapPin, X } from "lucide-react";
+import SearchWidget, { BookingType } from "@/components/search/SearchWidget";
+import { MapPin } from "lucide-react";
 
 const allProperties = [
   // Hourly properties
@@ -165,108 +164,49 @@ const bookingTypeLabels: Record<string, string> = {
   vibe: "Vibe & Chill",
 };
 
-const locations = ["All Locations", "Pokhara", "Kathmandu", "Bhaktapur", "Nagarkot", "Dhulikhel", "Patan"];
-
 const Properties = () => {
   const [searchParams] = useSearchParams();
-  const typeFromUrl = searchParams.get("type") || "";
+  const typeFromUrl = (searchParams.get("type") || "fullstay") as BookingType;
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState("All Locations");
-  const [showFilters, setShowFilters] = useState(false);
+  const [searchQuery] = useState("");
 
   const filteredProperties = useMemo(() => {
     return allProperties.filter((property) => {
       const matchesSearch = property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            property.location.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesType = !typeFromUrl || property.bookingType === typeFromUrl;
-      const matchesLocation = selectedLocation === "All Locations" || 
-                             property.location.includes(selectedLocation);
+      const matchesType = property.bookingType === typeFromUrl;
       
-      return matchesSearch && matchesType && matchesLocation;
+      return matchesSearch && matchesType;
     });
-  }, [searchQuery, typeFromUrl, selectedLocation]);
+  }, [searchQuery, typeFromUrl]);
 
-  const pageTitle = typeFromUrl ? `${bookingTypeLabels[typeFromUrl] || "All"} Properties` : "Explore Properties";
-  const pageDescription = typeFromUrl 
-    ? `Browse our ${bookingTypeLabels[typeFromUrl]?.toLowerCase() || ""} properties`
-    : "Discover the best stays across Nepal";
+  const pageTitle = bookingTypeLabels[typeFromUrl] || "Properties";
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="pt-20 md:pt-24 pb-12 md:pb-16">
-        <div className="container mx-auto px-4">
-          {/* Header */}
-          <div className="mb-6 md:mb-8">
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              {pageTitle}
+      <main className="pt-16 md:pt-20 pb-12 md:pb-16">
+        {/* Search Widget Section */}
+        <section className="bg-gradient-hero py-6 md:py-10">
+          <div className="container mx-auto px-4">
+            <h1 className="text-xl md:text-2xl font-bold text-foreground text-center mb-4">
+              {pageTitle} Properties
             </h1>
-            <p className="text-muted-foreground text-sm md:text-base mt-1">
-              {pageDescription}
-            </p>
-          </div>
-
-          {/* Search & Filters */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search properties..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-10"
+            <div className="max-w-4xl mx-auto">
+              <SearchWidget
+                activeType={typeFromUrl}
+                showTabs={true}
+                navigateOnTabClick={true}
               />
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="h-10"
-            >
-              <SlidersHorizontal className="w-4 h-4 mr-2" />
-              Filters
-            </Button>
           </div>
+        </section>
 
-          {/* Filter Panel */}
-          {showFilters && (
-            <div className="bg-card rounded-xl border border-border p-4 md:p-6 mb-6 animate-fade-in">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-card-foreground text-sm md:text-base">Filters</h3>
-                <button
-                  onClick={() => setShowFilters(false)}
-                  className="p-1 hover:bg-muted rounded"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div>
-                <label className="text-xs md:text-sm font-medium text-muted-foreground mb-2 block">
-                  Location
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {locations.map((location) => (
-                    <button
-                      key={location}
-                      onClick={() => setSelectedLocation(location)}
-                      className={`px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-colors ${
-                        selectedLocation === location
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground hover:bg-muted/80"
-                      }`}
-                    >
-                      {location}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
+        <div className="container mx-auto px-4 mt-6 md:mt-8">
           {/* Results Count */}
           <p className="text-xs md:text-sm text-muted-foreground mb-4 md:mb-6">
-            Showing {filteredProperties.length} properties
+            Showing {filteredProperties.length} {pageTitle.toLowerCase()} properties
           </p>
 
           {/* Properties Grid */}
@@ -283,7 +223,7 @@ const Properties = () => {
                 No properties found
               </h3>
               <p className="text-muted-foreground text-sm">
-                Try adjusting your filters or search query
+                Try a different category or search query
               </p>
             </div>
           )}
