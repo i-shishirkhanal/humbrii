@@ -4,20 +4,13 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import PropertyCard from "@/components/cards/PropertyCard";
+import SearchWidget, { BookingType } from "@/components/search/SearchWidget";
 import {
-  Search,
-  MapPin,
-  Calendar,
-  Clock,
-  Users,
   Shield,
   Heart,
   ArrowRight,
   Building2,
-  Sun,
-  Moon,
-  Zap,
-  Map,
+  Clock,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -245,13 +238,6 @@ const features = [
   },
 ];
 
-const bookingTypes = [
-  { id: "hourly", label: "Hourly", icon: Clock },
-  { id: "daycation", label: "Daycation", icon: Sun },
-  { id: "fullstay", label: "Full Stay", icon: Moon },
-  { id: "vibe", label: "Vibe & Chill", icon: Zap },
-];
-
 interface ScrollableSectionProps {
   title: string;
   subtitle: string;
@@ -316,7 +302,7 @@ const ScrollableSection = ({ title, subtitle, properties, linkTo, bgClass = "" }
 };
 
 const Index = () => {
-  const [activeBookingType, setActiveBookingType] = useState("daycation");
+  const [activeBookingType, setActiveBookingType] = useState<BookingType>("daycation");
 
   return (
     <div className="min-h-screen bg-background">
@@ -339,104 +325,13 @@ const Index = () => {
               Discover handpicked hotels, resorts, and unique accommodations.
             </p>
 
-            {/* Booking Type Tabs */}
-            <div className="mt-4 md:mt-6 flex justify-center animate-fade-up" style={{ animationDelay: "0.15s" }}>
-              <div className="inline-flex items-center gap-0.5 p-1 bg-secondary/80 backdrop-blur-sm rounded-full border border-border">
-                {bookingTypes.map((type) => {
-                  const Icon = type.icon;
-                  const isActive = activeBookingType === type.id;
-                  return (
-                    <button
-                      key={type.id}
-                      onClick={() => setActiveBookingType(type.id)}
-                      className={`flex items-center gap-1 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs md:text-sm font-medium transition-all duration-300 whitespace-nowrap ${
-                        isActive
-                          ? "bg-primary text-primary-foreground shadow-lg"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                      <span>{type.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Search Widget */}
-            <div className="mt-4 md:mt-6 animate-fade-up" style={{ animationDelay: "0.2s" }}>
-              <div className="bg-secondary/80 backdrop-blur-sm rounded-xl border border-border p-1.5 md:p-2">
-                <div className="flex flex-col sm:flex-row items-stretch gap-1.5 md:gap-2">
-                  {/* Location */}
-                  <div className="flex-1 bg-card rounded-lg px-3 py-2 flex items-center gap-2 border border-transparent hover:border-primary/30 transition-colors">
-                    <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
-                    <div className="flex flex-col items-start flex-1 min-w-0">
-                      <span className="text-[8px] md:text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Location</span>
-                      <input
-                        type="text"
-                        placeholder="Kathmandu"
-                        className="bg-transparent text-xs md:text-sm font-medium text-foreground placeholder:text-foreground focus:outline-none w-full"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="hidden sm:block w-px h-8 bg-border self-center" />
-
-                  {/* Date */}
-                  <div className="flex-1 bg-card rounded-lg px-3 py-2 flex items-center gap-2 border border-transparent hover:border-primary/30 transition-colors">
-                    <Calendar className="w-4 h-4 text-primary flex-shrink-0" />
-                    <div className="flex flex-col items-start flex-1 min-w-0">
-                      <span className="text-[8px] md:text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Date</span>
-                      <input
-                        type="text"
-                        placeholder="Today"
-                        className="bg-transparent text-xs md:text-sm font-medium text-foreground placeholder:text-foreground focus:outline-none w-full"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="hidden sm:block w-px h-8 bg-border self-center" />
-
-                  {/* Time - Hidden on mobile */}
-                  <div className="hidden md:flex flex-1 bg-card rounded-lg px-3 py-2 items-center gap-2 border border-transparent hover:border-primary/30 transition-colors">
-                    <Clock className="w-4 h-4 text-primary flex-shrink-0" />
-                    <div className="flex flex-col items-start flex-1 min-w-0">
-                      <span className="text-[8px] md:text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Time</span>
-                      <input
-                        type="text"
-                        placeholder="10 AM - 6 PM"
-                        className="bg-transparent text-xs md:text-sm font-medium text-foreground placeholder:text-foreground focus:outline-none w-full"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="hidden md:block w-px h-8 bg-border self-center" />
-
-                  {/* Guests */}
-                  <div className="flex-1 bg-card rounded-lg px-3 py-2 flex items-center gap-2 border border-transparent hover:border-primary/30 transition-colors">
-                    <Users className="w-4 h-4 text-primary flex-shrink-0" />
-                    <div className="flex flex-col items-start flex-1 min-w-0">
-                      <span className="text-[8px] md:text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Guests</span>
-                      <input
-                        type="text"
-                        placeholder="2 Guests"
-                        className="bg-transparent text-xs md:text-sm font-medium text-foreground placeholder:text-foreground focus:outline-none w-full"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-1.5">
-                    <button className="p-2 rounded-lg bg-card border border-border hover:border-primary/30 transition-colors">
-                      <Map className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                    <Button size="sm" className="h-9 px-3 md:px-4 rounded-lg">
-                      <Search className="w-4 h-4" />
-                      <span className="ml-1.5 hidden sm:inline">Search</span>
-                    </Button>
-                  </div>
-                </div>
-              </div>
+            {/* Search Widget with Tabs */}
+            <div className="mt-4 md:mt-6 animate-fade-up" style={{ animationDelay: "0.15s" }}>
+              <SearchWidget
+                activeType={activeBookingType}
+                onTypeChange={setActiveBookingType}
+                showTabs={true}
+              />
             </div>
           </div>
         </div>
