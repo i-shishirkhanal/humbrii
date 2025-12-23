@@ -15,6 +15,8 @@ const mockBookings = [
     checkOut: "Dec 28, 2024",
     status: "confirmed" as const,
     totalAmount: 25500,
+    paidAmount: 25500,
+    paymentType: "full" as const,
     bookingType: "full_stay" as const,
   },
   {
@@ -24,8 +26,10 @@ const mockBookings = [
     location: "Bhaktapur, Nepal",
     checkIn: "Jan 5, 2025",
     checkOut: "Jan 6, 2025",
-    status: "pending" as const,
+    status: "confirmed" as const,
     totalAmount: 6200,
+    paidAmount: 1240, // 20% of 6200
+    paymentType: "partial" as const,
     bookingType: "daycation" as const,
   },
   {
@@ -37,12 +41,29 @@ const mockBookings = [
     checkOut: "Nov 18, 2024",
     status: "completed" as const,
     totalAmount: 36000,
+    paidAmount: 36000,
+    paymentType: "full" as const,
     bookingType: "full_stay" as const,
+    hasRated: false,
+  },
+  {
+    id: "4",
+    propertyName: "Mountain Retreat",
+    propertyImage: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800&q=80",
+    location: "Nagarkot, Nepal",
+    checkIn: "Oct 10, 2024",
+    checkOut: "Oct 12, 2024",
+    status: "completed" as const,
+    totalAmount: 18000,
+    paidAmount: 18000,
+    paymentType: "full" as const,
+    bookingType: "full_stay" as const,
+    hasRated: true,
   },
 ];
 
 const UserBookings = () => {
-  const upcomingBookings = mockBookings.filter(b => b.status === "confirmed" || b.status === "pending");
+  const upcomingBookings = mockBookings.filter(b => b.status === "confirmed");
   const pastBookings = mockBookings.filter(b => b.status === "completed");
 
   return (
