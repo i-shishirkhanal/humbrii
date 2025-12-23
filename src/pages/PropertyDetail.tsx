@@ -1,13 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import PropertyMap from "@/components/map/PropertyMap";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import BookingWidget from "@/components/booking/BookingWidget";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   MapPin,
@@ -24,16 +23,32 @@ import {
   Share2,
   ChevronLeft,
   ChevronRight,
-  Calendar,
   Check,
   Shield,
   Clock,
   Map,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Sample property data
-const propertyData = {
+// Amenity icon mapping
+const amenityIcons: Record<string, any> = {
+  "Free WiFi": Wifi,
+  "WiFi": Wifi,
+  "Parking": Car,
+  "Free Parking": Car,
+  "Restaurant": UtensilsCrossed,
+  "Kitchen": UtensilsCrossed,
+  "TV": Tv,
+  "Smart TV": Tv,
+  "Air Conditioning": Wind,
+  "AC": Wind,
+  "Private Bath": Bath,
+  "Bathroom": Bath,
+};
+
+// Sample property data fallback
+const samplePropertyData = {
   id: "1",
   name: "Himalayan View Resort",
   location: "Pokhara, Nepal",
@@ -45,20 +60,13 @@ const propertyData = {
   ],
   rating: 4.9,
   reviews: 128,
-  pricePerNight: 8500,
+  base_price: 8500,
   maxGuests: 4,
   bedrooms: 2,
   bathrooms: 2,
-  propertyType: "Full Stay",
-  description: "Experience the breathtaking beauty of the Himalayas from this luxurious resort. Nestled in the heart of Pokhara, our resort offers stunning mountain views, world-class amenities, and exceptional service. Perfect for couples, families, or solo travelers seeking a peaceful retreat.",
-  amenities: [
-    { icon: Wifi, label: "Free WiFi" },
-    { icon: Car, label: "Free Parking" },
-    { icon: UtensilsCrossed, label: "Restaurant" },
-    { icon: Tv, label: "Smart TV" },
-    { icon: Wind, label: "Air Conditioning" },
-    { icon: Bath, label: "Private Bath" },
-  ],
+  category: "full_stay",
+  description: "Experience the breathtaking beauty of the Himalayas from this luxurious resort. Nestled in the heart of Pokhara, our resort offers stunning mountain views, world-class amenities, and exceptional service.",
+  amenities: ["Free WiFi", "Free Parking", "Restaurant", "Smart TV", "Air Conditioning", "Private Bath"],
   host: {
     name: "Ram Sharma",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80",
@@ -79,17 +87,45 @@ const PropertyDetail = () => {
   const navigate = useNavigate();
   const [currentImage, setCurrentImage] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [paymentType, setPaymentType] = useState("full");
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [checkInDate, setCheckInDate] = useState("");
-  const [checkOutDate, setCheckOutDate] = useState("");
-  const [guests, setGuests] = useState(1);
 
-  const property = propertyData;
+  // Fetch property from database
+  const { data: dbProperty, isLoading } = useQuery({
+    queryKey: ["property", id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("id", id)
+        .single();
+      
+      if (error) {
+        console.error("Error fetching property:", error);
+        return null;
+      }
+      return data;
+    },
+    enabled: !!id,
+  });
 
-  const totalAmount = property.pricePerNight * 2; // Assuming 2 nights
-  const partialAmount = Math.round(totalAmount * 0.2);
-  const remainingAmount = totalAmount - partialAmount;
+  // Use database property or fallback to sample
+  const property = dbProperty ? {
+    ...samplePropertyData,
+    id: dbProperty.id,
+    name: dbProperty.name,
+    location: dbProperty.location,
+    images: dbProperty.images?.length ? dbProperty.images : samplePropertyData.images,
+    base_price: dbProperty.base_price,
+    category: dbProperty.category,
+    description: dbProperty.description || samplePropertyData.description,
+    amenities: dbProperty.amenities?.length ? dbProperty.amenities : samplePropertyData.amenities,
+  } : samplePropertyData;
+
+  // Check if property is in favorites
+  useEffect(() => {
+    const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+    setIsFavorite(favorites.includes(property.id));
+  }, [property.id]);
 
   const nextImage = () => {
     setCurrentImage((prev) => (prev + 1) % property.images.length);
@@ -100,7 +136,6 @@ const PropertyDetail = () => {
   };
 
   const toggleFavorite = () => {
-    setIsFavorite(!isFavorite);
     const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
     if (!isFavorite) {
       favorites.push(property.id);
@@ -111,25 +146,27 @@ const PropertyDetail = () => {
       toast.success("Removed from favorites");
     }
     localStorage.setItem("favorites", JSON.stringify(favorites));
+    setIsFavorite(!isFavorite);
+    window.dispatchEvent(new Event("favoritesUpdated"));
   };
 
-  const handleCheckout = () => {
-    if (!checkInDate || !checkOutDate) {
-      toast.error("Please select check-in and check-out dates");
-      return;
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case "hourly": return "Hourly";
+      case "daycation": return "Daycation";
+      case "full_stay": return "Full Stay";
+      case "vibe_chill": return "Vibe & Chill";
+      default: return "Full Stay";
     }
-    setShowCheckout(true);
   };
 
-  const handlePayment = () => {
-    const amount = paymentType === "full" ? totalAmount : partialAmount;
-    toast.success(`Redirecting to eSewa for NPR ${amount.toLocaleString()} payment...`);
-    // In real implementation, integrate with eSewa API
-    setTimeout(() => {
-      toast.success("Booking confirmed! You will receive a confirmation email.");
-      navigate("/dashboard/bookings");
-    }, 2000);
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
@@ -195,7 +232,7 @@ const PropertyDetail = () => {
           {/* Property Type Badge */}
           <div className="absolute top-4 left-4">
             <span className="px-3 py-1 bg-primary text-primary-foreground rounded-full text-sm font-medium">
-              {property.propertyType}
+              {getCategoryLabel(property.category)}
             </span>
           </div>
         </div>
@@ -245,12 +282,15 @@ const PropertyDetail = () => {
             <div>
               <h2 className="text-xl font-semibold mb-3">What this place offers</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {property.amenities.map((amenity, idx) => (
-                  <div key={idx} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <amenity.icon className="w-5 h-5 text-primary" />
-                    <span>{amenity.label}</span>
-                  </div>
-                ))}
+                {property.amenities.map((amenity, idx) => {
+                  const IconComponent = amenityIcons[amenity] || Wifi;
+                  return (
+                    <div key={idx} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <IconComponent className="w-5 h-5 text-primary" />
+                      <span>{amenity}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -306,176 +346,16 @@ const PropertyDetail = () => {
             </div>
           </div>
 
-          {/* Right Column - Booking Card */}
+          {/* Right Column - Booking Widget */}
           <div className="lg:col-span-1">
-            <div className="sticky top-24 bg-card border border-border rounded-xl p-6 shadow-lg">
-              {!showCheckout ? (
-                <>
-                  <div className="flex items-baseline justify-between mb-4">
-                    <div>
-                      <span className="text-2xl font-bold">NPR {property.pricePerNight.toLocaleString()}</span>
-                      <span className="text-muted-foreground"> /night</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-primary fill-primary" />
-                      <span className="font-semibold">{property.rating}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label htmlFor="checkin">Check-in</Label>
-                        <Input
-                          id="checkin"
-                          type="date"
-                          value={checkInDate}
-                          onChange={(e) => setCheckInDate(e.target.value)}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="checkout">Check-out</Label>
-                        <Input
-                          id="checkout"
-                          type="date"
-                          value={checkOutDate}
-                          onChange={(e) => setCheckOutDate(e.target.value)}
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="guests">Guests</Label>
-                      <Input
-                        id="guests"
-                        type="number"
-                        min={1}
-                        max={property.maxGuests}
-                        value={guests}
-                        onChange={(e) => setGuests(parseInt(e.target.value))}
-                        className="mt-1"
-                      />
-                    </div>
-
-                    <Button className="w-full" size="lg" onClick={handleCheckout}>
-                      Reserve Now
-                    </Button>
-
-                    <p className="text-center text-sm text-muted-foreground">
-                      You won't be charged yet
-                    </p>
-                  </div>
-
-                  {/* Price Breakdown */}
-                  <div className="mt-6 pt-6 border-t border-border space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">NPR {property.pricePerNight.toLocaleString()} x 2 nights</span>
-                      <span>NPR {totalAmount.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Service fee</span>
-                      <span>NPR 500</span>
-                    </div>
-                    <div className="flex justify-between font-semibold pt-3 border-t border-border">
-                      <span>Total</span>
-                      <span>NPR {(totalAmount + 500).toLocaleString()}</span>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h3 className="text-xl font-semibold mb-4">Payment Options</h3>
-                  
-                  <RadioGroup value={paymentType} onValueChange={setPaymentType} className="space-y-3">
-                    <div className={cn(
-                      "flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors",
-                      paymentType === "full" 
-                        ? "border-primary bg-primary/5" 
-                        : "border-border hover:border-muted-foreground"
-                    )}>
-                      <RadioGroupItem value="full" id="full" className="mt-1" />
-                      <div className="flex-1">
-                        <Label htmlFor="full" className="font-semibold cursor-pointer">
-                          Pay in full
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Pay NPR {(totalAmount + 500).toLocaleString()} now
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className={cn(
-                      "flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors",
-                      paymentType === "partial" 
-                        ? "border-primary bg-primary/5" 
-                        : "border-border hover:border-muted-foreground"
-                    )}>
-                      <RadioGroupItem value="partial" id="partial" className="mt-1" />
-                      <div className="flex-1">
-                        <Label htmlFor="partial" className="font-semibold cursor-pointer">
-                          Pay 20% now
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Pay NPR {partialAmount.toLocaleString()} now, NPR {remainingAmount.toLocaleString()} on check-in
-                        </p>
-                      </div>
-                    </div>
-                  </RadioGroup>
-
-                  {/* eSewa Payment Button */}
-                  <div className="mt-6 space-y-3">
-                    <Button 
-                      className="w-full bg-[#60BB46] hover:bg-[#4fa03a] text-white"
-                      size="lg"
-                      onClick={handlePayment}
-                    >
-                      <img 
-                        src="https://esewa.com.np/common/images/esewa_logo.png" 
-                        alt="eSewa" 
-                        className="w-20 h-6 mr-2 object-contain bg-white rounded px-1"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                      Pay with eSewa
-                    </Button>
-
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={() => setShowCheckout(false)}
-                    >
-                      Back to Details
-                    </Button>
-                  </div>
-
-                  {/* Summary */}
-                  <div className="mt-6 p-4 bg-muted/50 rounded-lg space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Check-in</span>
-                      <span className="font-medium">{checkInDate}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Check-out</span>
-                      <span className="font-medium">{checkOutDate}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Guests</span>
-                      <span className="font-medium">{guests}</span>
-                    </div>
-                    <div className="flex justify-between pt-2 border-t border-border font-semibold">
-                      <span>
-                        {paymentType === "full" ? "Total" : "Due now"}
-                      </span>
-                      <span>
-                        NPR {(paymentType === "full" ? totalAmount + 500 : partialAmount).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </>
-              )}
+            <div className="sticky top-24">
+              <BookingWidget
+                propertyId={property.id}
+                propertyName={property.name}
+                pricePerNight={property.base_price}
+                maxGuests={property.maxGuests}
+                rating={property.rating}
+              />
             </div>
           </div>
         </div>
