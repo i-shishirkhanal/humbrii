@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -20,7 +19,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Star, Search, Eye, EyeOff, Edit, Trash2 } from "lucide-react";
+import { Star, Search, Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -31,7 +30,6 @@ const mockRatings = [
     propertyName: "Himalayan View Resort",
     userName: "John Doe",
     rating: 5,
-    review: "Amazing experience! The views were breathtaking and the staff was incredibly helpful.",
     isVisible: true,
     createdAt: "2024-12-20",
   },
@@ -40,7 +38,6 @@ const mockRatings = [
     propertyName: "Heritage Boutique Hotel",
     userName: "Jane Smith",
     rating: 4,
-    review: "Great location and comfortable rooms. Would definitely visit again.",
     isVisible: true,
     createdAt: "2024-12-19",
   },
@@ -49,7 +46,6 @@ const mockRatings = [
     propertyName: "Lakeside Paradise Villa",
     userName: "Mike Wilson",
     rating: 3,
-    review: "Good but could be better. The breakfast was average.",
     isVisible: false,
     createdAt: "2024-12-18",
   },
@@ -58,7 +54,6 @@ const mockRatings = [
     propertyName: "Mountain Retreat",
     userName: "Sarah Johnson",
     rating: 5,
-    review: "Perfect getaway! Highly recommended for families.",
     isVisible: true,
     createdAt: "2024-12-17",
   },
@@ -67,7 +62,6 @@ const mockRatings = [
     propertyName: "Himalayan View Resort",
     userName: "Tom Brown",
     rating: 2,
-    review: "Not worth the price. Service was slow.",
     isVisible: true,
     createdAt: "2024-12-16",
   },
@@ -78,7 +72,6 @@ const AdminRatings = () => {
   const [ratings, setRatings] = useState(mockRatings);
   const [editingRating, setEditingRating] = useState<typeof mockRatings[0] | null>(null);
   const [editedRating, setEditedRating] = useState(0);
-  const [editedReview, setEditedReview] = useState("");
 
   const filteredRatings = ratings.filter(
     (rating) =>
@@ -101,7 +94,6 @@ const AdminRatings = () => {
   const openEditDialog = (rating: typeof mockRatings[0]) => {
     setEditingRating(rating);
     setEditedRating(rating.rating);
-    setEditedReview(rating.review);
   };
 
   const saveRating = () => {
@@ -109,7 +101,7 @@ const AdminRatings = () => {
     setRatings(
       ratings.map((r) =>
         r.id === editingRating.id
-          ? { ...r, rating: editedRating, review: editedReview }
+          ? { ...r, rating: editedRating }
           : r
       )
     );
@@ -218,7 +210,6 @@ const AdminRatings = () => {
                   <TableHead>Property</TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Rating</TableHead>
-                  <TableHead>Review</TableHead>
                   <TableHead>Visible</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Actions</TableHead>
@@ -230,7 +221,6 @@ const AdminRatings = () => {
                     <TableCell className="font-medium">{rating.propertyName}</TableCell>
                     <TableCell>{rating.userName}</TableCell>
                     <TableCell>{renderStars(rating.rating)}</TableCell>
-                    <TableCell className="max-w-xs truncate">{rating.review}</TableCell>
                     <TableCell>
                       <Switch
                         checked={rating.isVisible}
@@ -284,16 +274,6 @@ const AdminRatings = () => {
                 <div className="mt-2">
                   {renderStars(editedRating, true, setEditedRating)}
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="review">Review</Label>
-                <Textarea
-                  id="review"
-                  value={editedReview}
-                  onChange={(e) => setEditedReview(e.target.value)}
-                  className="mt-1"
-                  rows={4}
-                />
               </div>
             </div>
             <DialogFooter>

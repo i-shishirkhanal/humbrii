@@ -7,8 +7,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
 
@@ -17,7 +15,7 @@ interface RatingDialogProps {
   onClose: () => void;
   propertyName: string;
   bookingId: string;
-  onSubmit: (rating: number, review: string) => void;
+  onSubmit: (rating: number) => void;
 }
 
 const RatingDialog = ({
@@ -28,7 +26,6 @@ const RatingDialog = ({
   onSubmit,
 }: RatingDialogProps) => {
   const [rating, setRating] = useState(0);
-  const [review, setReview] = useState("");
   const [hoveredRating, setHoveredRating] = useState(0);
 
   const handleSubmit = () => {
@@ -36,9 +33,8 @@ const RatingDialog = ({
       toast.error("Please select a rating");
       return;
     }
-    onSubmit(rating, review);
+    onSubmit(rating);
     setRating(0);
-    setReview("");
     onClose();
     toast.success("Thank you for your rating!");
   };
@@ -91,19 +87,6 @@ const RatingDialog = ({
                 ? "Very Good"
                 : "Excellent"}
             </p>
-          </div>
-
-          {/* Review */}
-          <div>
-            <Label htmlFor="review">Write a review (optional)</Label>
-            <Textarea
-              id="review"
-              value={review}
-              onChange={(e) => setReview(e.target.value)}
-              placeholder="Share your experience with other travelers..."
-              className="mt-1"
-              rows={4}
-            />
           </div>
         </div>
         <DialogFooter>

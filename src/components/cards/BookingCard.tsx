@@ -52,9 +52,9 @@ const BookingCard = ({
   const remainingAmount = totalAmount - paidAmount;
   const paymentProgress = (paidAmount / totalAmount) * 100;
 
-  const handleRatingSubmit = (rating: number, review: string) => {
+  const handleRatingSubmit = (rating: number) => {
     // In real implementation, save to database
-    console.log("Rating submitted:", { bookingId: id, rating, review });
+    console.log("Rating submitted:", { bookingId: id, rating });
     setRated(true);
   };
 
