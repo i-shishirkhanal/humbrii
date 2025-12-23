@@ -11,10 +11,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const navLinks = [
-  { name: "Hourly", path: "/hourly" },
-  { name: "Daycation", path: "/daycation" },
-  { name: "Full Stay", path: "/full-stay" },
-  { name: "Vibe & Chill", path: "/vibe-chill" },
+  { name: "Hourly", path: "/properties?type=hourly" },
+  { name: "Daycation", path: "/properties?type=daycation" },
+  { name: "Full Stay", path: "/properties?type=fullstay" },
+  { name: "Vibe & Chill", path: "/properties?type=vibe" },
 ];
 
 const Navbar = () => {
