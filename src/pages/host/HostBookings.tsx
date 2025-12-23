@@ -1,7 +1,7 @@
-import DashboardLayout from "@/components/layout/DashboardLayout";
+import HostLayout from "@/components/layout/HostLayout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, X, Clock } from "lucide-react";
+import { Check, X, Clock, Calendar } from "lucide-react";
 
 const mockBookings = [
   {
@@ -88,58 +88,113 @@ const HostBookings = () => {
     </tr>
   );
 
+  const BookingCard = ({ booking }: { booking: typeof mockBookings[0] }) => (
+    <div className="bg-card rounded-xl border border-border p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <p className="font-medium text-card-foreground">{booking.guestName}</p>
+          <p className="text-xs text-muted-foreground">{booking.guestEmail}</p>
+        </div>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          booking.status === "confirmed" ? "bg-success/10 text-success" :
+          booking.status === "pending" ? "bg-warning/10 text-warning" :
+          "bg-muted text-muted-foreground"
+        }`}>
+          {booking.status}
+        </span>
+      </div>
+      <div className="space-y-2 text-sm">
+        <p className="text-muted-foreground">{booking.property} • {booking.roomType}</p>
+        <p className="text-muted-foreground">{booking.checkIn} - {booking.checkOut}</p>
+        <p className="font-semibold text-card-foreground">{booking.amount}</p>
+      </div>
+      {booking.status === "pending" && (
+        <div className="mt-3 flex items-center gap-2">
+          <Button size="sm" className="flex-1 bg-success hover:bg-success/90">
+            <Check className="w-4 h-4 mr-1" />
+            Accept
+          </Button>
+          <Button size="sm" variant="destructive" className="flex-1">
+            <X className="w-4 h-4 mr-1" />
+            Decline
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <DashboardLayout role="host">
+    <HostLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Bookings</h1>
           <p className="text-muted-foreground mt-1">Manage guest bookings for your properties</p>
         </div>
 
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList>
-            <TabsTrigger value="all">All ({mockBookings.length})</TabsTrigger>
-            <TabsTrigger value="pending">
-              <Clock className="w-3 h-3 mr-1" />
-              Pending ({pendingBookings.length})
-            </TabsTrigger>
-            <TabsTrigger value="confirmed">Confirmed ({confirmedBookings.length})</TabsTrigger>
-            <TabsTrigger value="completed">Completed ({completedBookings.length})</TabsTrigger>
-          </TabsList>
+        {mockBookings.length === 0 ? (
+          <div className="bg-card rounded-xl border border-border p-8 text-center">
+            <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold text-card-foreground mb-2">No bookings yet</h3>
+            <p className="text-muted-foreground">Bookings will appear here once guests start booking your properties</p>
+          </div>
+        ) : (
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList className="w-full md:w-auto">
+              <TabsTrigger value="all" className="flex-1 md:flex-none">All ({mockBookings.length})</TabsTrigger>
+              <TabsTrigger value="pending" className="flex-1 md:flex-none">
+                <Clock className="w-3 h-3 mr-1" />
+                Pending ({pendingBookings.length})
+              </TabsTrigger>
+              <TabsTrigger value="confirmed" className="flex-1 md:flex-none">Confirmed ({confirmedBookings.length})</TabsTrigger>
+              <TabsTrigger value="completed" className="flex-1 md:flex-none">Completed ({completedBookings.length})</TabsTrigger>
+            </TabsList>
 
-          {["all", "pending", "confirmed", "completed"].map((tab) => (
-            <TabsContent key={tab} value={tab} className="mt-4">
-              <div className="bg-card rounded-xl border border-border overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Guest</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Property</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Room</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Dates</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Amount</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {(tab === "all" ? mockBookings :
-                        tab === "pending" ? pendingBookings :
-                        tab === "confirmed" ? confirmedBookings :
-                        completedBookings
-                      ).map((booking) => (
-                        <BookingRow key={booking.id} booking={booking} />
-                      ))}
-                    </tbody>
-                  </table>
+            {["all", "pending", "confirmed", "completed"].map((tab) => (
+              <TabsContent key={tab} value={tab} className="mt-4">
+                {/* Desktop Table */}
+                <div className="hidden md:block bg-card rounded-xl border border-border overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Guest</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Property</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Room</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Dates</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Amount</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {(tab === "all" ? mockBookings :
+                          tab === "pending" ? pendingBookings :
+                          tab === "confirmed" ? confirmedBookings :
+                          completedBookings
+                        ).map((booking) => (
+                          <BookingRow key={booking.id} booking={booking} />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden grid gap-4">
+                  {(tab === "all" ? mockBookings :
+                    tab === "pending" ? pendingBookings :
+                    tab === "confirmed" ? confirmedBookings :
+                    completedBookings
+                  ).map((booking) => (
+                    <BookingCard key={booking.id} booking={booking} />
+                  ))}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        )}
       </div>
-    </DashboardLayout>
+    </HostLayout>
   );
 };
 

@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      host_payout_methods: {
+        Row: {
+          bank_account_holder: string | null
+          bank_account_number: string | null
+          bank_branch: string | null
+          bank_name: string | null
+          created_at: string
+          esewa_id: string | null
+          esewa_phone: string | null
+          host_id: string
+          id: string
+          is_primary: boolean | null
+          method_type: string
+          updated_at: string
+        }
+        Insert: {
+          bank_account_holder?: string | null
+          bank_account_number?: string | null
+          bank_branch?: string | null
+          bank_name?: string | null
+          created_at?: string
+          esewa_id?: string | null
+          esewa_phone?: string | null
+          host_id: string
+          id?: string
+          is_primary?: boolean | null
+          method_type: string
+          updated_at?: string
+        }
+        Update: {
+          bank_account_holder?: string | null
+          bank_account_number?: string | null
+          bank_branch?: string | null
+          bank_name?: string | null
+          created_at?: string
+          esewa_id?: string | null
+          esewa_phone?: string | null
+          host_id?: string
+          id?: string
+          is_primary?: boolean | null
+          method_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -43,6 +88,125 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      properties: {
+        Row: {
+          address: string | null
+          amenities: string[] | null
+          base_price: number
+          category: Database["public"]["Enums"]["property_category"]
+          created_at: string
+          currency: string | null
+          description: string | null
+          host_id: string
+          hourly_available_slots: string[] | null
+          hourly_end_time: string | null
+          hourly_minimum_hours: number | null
+          hourly_start_time: string | null
+          id: string
+          images: string[] | null
+          is_published: boolean | null
+          location: string
+          name: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          amenities?: string[] | null
+          base_price: number
+          category: Database["public"]["Enums"]["property_category"]
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          host_id: string
+          hourly_available_slots?: string[] | null
+          hourly_end_time?: string | null
+          hourly_minimum_hours?: number | null
+          hourly_start_time?: string | null
+          id?: string
+          images?: string[] | null
+          is_published?: boolean | null
+          location: string
+          name: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          amenities?: string[] | null
+          base_price?: number
+          category?: Database["public"]["Enums"]["property_category"]
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          host_id?: string
+          hourly_available_slots?: string[] | null
+          hourly_end_time?: string | null
+          hourly_minimum_hours?: number | null
+          hourly_start_time?: string | null
+          id?: string
+          images?: string[] | null
+          is_published?: boolean | null
+          location?: string
+          name?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rooms: {
+        Row: {
+          amenities: string[] | null
+          bed_type: string | null
+          created_at: string
+          description: string | null
+          id: string
+          images: string[] | null
+          is_available: boolean | null
+          max_guests: number | null
+          name: string
+          price_override: number | null
+          property_id: string
+          updated_at: string
+        }
+        Insert: {
+          amenities?: string[] | null
+          bed_type?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          is_available?: boolean | null
+          max_guests?: number | null
+          name: string
+          price_override?: number | null
+          property_id: string
+          updated_at?: string
+        }
+        Update: {
+          amenities?: string[] | null
+          bed_type?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          is_available?: boolean | null
+          max_guests?: number | null
+          name?: string
+          price_override?: number | null
+          property_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -80,6 +244,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "host" | "user"
+      property_category: "hourly" | "daycation" | "full_stay" | "vibe_chill"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -208,6 +373,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "host", "user"],
+      property_category: ["hourly", "daycation", "full_stay", "vibe_chill"],
     },
   },
 } as const
