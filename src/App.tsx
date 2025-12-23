@@ -38,6 +38,7 @@ import AdminPayments from "./pages/admin/AdminPayments";
 import AdminDisputes from "./pages/admin/AdminDisputes";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
+import AdminRatings from "./pages/admin/AdminRatings";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,7 @@ const App = () => (
             <Route path="/admin/properties" element={<ProtectedRoute requiredRole="admin"><AdminProperties /></ProtectedRoute>} />
             <Route path="/admin/bookings" element={<ProtectedRoute requiredRole="admin"><AdminBookings /></ProtectedRoute>} />
             <Route path="/admin/payments" element={<ProtectedRoute requiredRole="admin"><AdminPayments /></ProtectedRoute>} />
+            <Route path="/admin/ratings" element={<ProtectedRoute requiredRole="admin"><AdminRatings /></ProtectedRoute>} />
             <Route path="/admin/disputes" element={<ProtectedRoute requiredRole="admin"><AdminDisputes /></ProtectedRoute>} />
             <Route path="/admin/analytics" element={<ProtectedRoute requiredRole="admin"><AdminAnalytics /></ProtectedRoute>} />
             <Route path="/admin/audit-logs" element={<ProtectedRoute requiredRole="admin"><AdminAuditLogs /></ProtectedRoute>} />

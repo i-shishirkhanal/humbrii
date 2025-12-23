@@ -20,6 +20,7 @@ import {
   FileText,
   AlertTriangle,
   BarChart3,
+  Star,
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -56,6 +57,7 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
     { icon: Building2, label: "Properties", href: "/admin/properties" },
     { icon: Calendar, label: "Bookings", href: "/admin/bookings" },
     { icon: DollarSign, label: "Payments", href: "/admin/payments" },
+    { icon: Star, label: "Ratings", href: "/admin/ratings" },
     { icon: AlertTriangle, label: "Disputes", href: "/admin/disputes" },
     { icon: BarChart3, label: "Analytics", href: "/admin/analytics" },
     { icon: FileText, label: "Audit Logs", href: "/admin/audit-logs" },

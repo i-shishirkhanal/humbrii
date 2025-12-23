@@ -161,6 +161,50 @@ export type Database = {
         }
         Relationships: []
       }
+      property_ratings: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          id: string
+          is_visible: boolean | null
+          property_id: string
+          rating: number
+          review: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          is_visible?: boolean | null
+          property_id: string
+          rating: number
+          review?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          is_visible?: boolean | null
+          property_id?: string
+          rating?: number
+          review?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_ratings_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           amenities: string[] | null
