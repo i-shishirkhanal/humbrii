@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { User, CalendarCheck, Settings, Activity, LogOut, ArrowRightLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,13 +11,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
-  const { user, signOut, roles } = useAuth();
+  const { user, signOut, roles, requestHostRole } = useAuth();
   const navigate = useNavigate();
   const isHost = roles.includes("host");
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const handleSwitchToHost = async () => {
+    if (isHost) {
+      navigate("/host");
+    } else {
+      // Request host role
+      const { error } = await requestHostRole();
+      if (error) {
+        toast.error("Failed to become a host. Please try again.");
+      } else {
+        toast.success("You are now a host!");
+        navigate("/host");
+      }
+    }
   };
 
   return (
@@ -66,21 +82,13 @@ const Navbar = () => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  {isHost ? (
-                    <DropdownMenuItem asChild>
-                      <Link to="/host" className="flex items-center gap-3 cursor-pointer py-2.5 text-accent">
-                        <ArrowRightLeft className="w-4 h-4" />
-                        <span>Switch to Host</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem asChild>
-                      <Link to="/auth?mode=signup&role=host" className="flex items-center gap-3 cursor-pointer py-2.5 text-accent">
-                        <ArrowRightLeft className="w-4 h-4" />
-                        <span>Become a Host</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem 
+                    onClick={handleSwitchToHost}
+                    className="flex items-center gap-3 cursor-pointer py-2.5 text-accent"
+                  >
+                    <ArrowRightLeft className="w-4 h-4" />
+                    <span>{isHost ? "Switch to Host" : "Become a Host"}</span>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={handleSignOut}
