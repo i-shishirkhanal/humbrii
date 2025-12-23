@@ -379,13 +379,13 @@ const Index = () => {
             {whoWeServe.map((item) => (
               <div
                 key={item.title}
-                className="flex-shrink-0 w-24 md:w-28 p-2.5 rounded-lg bg-card border border-border hover:border-primary/30 hover:shadow-sm transition-all text-center group"
+                className="flex-shrink-0 w-24 p-2.5 rounded-lg bg-card border border-border hover:border-primary/30 hover:shadow-sm transition-all text-center group"
               >
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
                   <item.icon className="w-4 h-4 text-primary" />
                 </div>
-                <h3 className="text-card-foreground font-medium text-[10px] md:text-xs mb-0.5 leading-tight">{item.title}</h3>
-                <p className="text-muted-foreground text-[8px] md:text-[10px] leading-tight">{item.description}</p>
+                <h3 className="text-card-foreground font-medium text-[10px] mb-0.5 leading-tight">{item.title}</h3>
+                <p className="text-muted-foreground text-[8px] leading-tight">{item.description}</p>
               </div>
             ))}
           </div>

@@ -10,6 +10,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+const navLinks = [
+  { name: "Hourly", path: "/hourly" },
+  { name: "Daycation", path: "/daycation" },
+  { name: "Full Stay", path: "/full-stay" },
+  { name: "Vibe & Chill", path: "/vibe-chill" },
+];
+
 const Navbar = () => {
   const { user, signOut, roles, requestHostRole } = useAuth();
   const navigate = useNavigate();
@@ -46,6 +53,19 @@ const Navbar = () => {
             </div>
             <span className="text-xl font-bold text-foreground">Humbri</span>
           </Link>
+
+          {/* Desktop Navigation Links */}
+          <div className="hidden md:flex items-center gap-6">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {link.name}
+              </Link>
+            ))}
+          </div>
 
           {/* Profile Button / Auth */}
           <div className="flex items-center">
