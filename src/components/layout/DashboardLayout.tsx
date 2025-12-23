@@ -58,7 +58,7 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
     { icon: DollarSign, label: "Payments", href: "/admin/payments" },
     { icon: AlertTriangle, label: "Disputes", href: "/admin/disputes" },
     { icon: BarChart3, label: "Analytics", href: "/admin/analytics" },
-    { icon: FileText, label: "Audit Logs", href: "/admin/logs" },
+    { icon: FileText, label: "Audit Logs", href: "/admin/audit-logs" },
     { icon: Settings, label: "Settings", href: "/admin/settings" },
   ];
 
