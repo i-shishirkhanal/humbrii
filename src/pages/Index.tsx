@@ -310,24 +310,42 @@ const Index = () => {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative pt-16 pb-8 md:pt-24 md:pb-16 bg-gradient-hero overflow-hidden">
-        {/* Decorative Elements */}
-        <div className="absolute top-20 left-10 w-48 md:w-72 h-48 md:h-72 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-64 md:w-96 h-64 md:h-96 bg-accent/10 rounded-full blur-3xl" />
+      <section className="relative pt-20 pb-8 md:pt-28 md:pb-16 overflow-hidden">
+        {/* Animated Background */}
+        <div className="absolute inset-0 bg-gradient-hero" />
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-10 left-[10%] w-2 h-2 bg-primary rounded-full animate-pulse" />
+          <div className="absolute top-32 left-[25%] w-3 h-3 bg-accent rounded-full animate-pulse" style={{ animationDelay: "0.5s" }} />
+          <div className="absolute top-20 right-[15%] w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: "1s" }} />
+          <div className="absolute top-40 right-[30%] w-1.5 h-1.5 bg-accent rounded-full animate-pulse" style={{ animationDelay: "1.5s" }} />
+        </div>
+        
+        {/* Decorative Gradient Orbs */}
+        <div className="absolute top-10 left-0 w-[500px] h-[500px] bg-gradient-to-br from-primary/20 via-accent/10 to-transparent rounded-full blur-3xl -translate-x-1/2" />
+        <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-gradient-to-tl from-accent/15 via-primary/10 to-transparent rounded-full blur-3xl translate-x-1/3" />
 
         <div className="container mx-auto px-4 relative">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight animate-fade-up">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-4 animate-fade-up">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              <span className="text-xs font-medium text-primary">500+ Properties Across Nepal</span>
+            </div>
+            
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight animate-fade-up">
               Find Your Perfect
-              <span className="text-gradient"> Stay in Nepal</span>
+              <span className="text-gradient block sm:inline"> Stay in Nepal</span>
             </h1>
 
-            <p className="mt-3 md:mt-4 text-sm md:text-base text-muted-foreground max-w-xl mx-auto animate-fade-up" style={{ animationDelay: "0.1s" }}>
+            <p className="mt-4 md:mt-5 text-sm md:text-lg text-muted-foreground max-w-2xl mx-auto animate-fade-up leading-relaxed" style={{ animationDelay: "0.1s" }}>
               Discover handpicked hotels, resorts, and unique accommodations.
             </p>
 
             {/* Search Widget with Tabs */}
-            <div className="mt-4 md:mt-6 animate-fade-up" style={{ animationDelay: "0.15s" }}>
+            <div className="mt-6 md:mt-8 animate-fade-up" style={{ animationDelay: "0.15s" }}>
               <SearchWidget
                 activeType={activeBookingType}
                 onTypeChange={setActiveBookingType}
@@ -339,22 +357,20 @@ const Index = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-6 md:py-10">
+      <section className="py-8 md:py-12 bg-card/50">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
             {features.map((feature, index) => (
               <div
                 key={feature.title}
-                className="p-3 md:p-4 rounded-xl bg-card border border-border hover:shadow-medium transition-shadow animate-fade-up flex items-start gap-3"
+                className="group p-4 md:p-6 rounded-2xl bg-card border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300 animate-fade-up"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div className="w-9 h-9 md:w-10 md:h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <feature.icon className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <feature.icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
                 </div>
-                <div>
-                  <h3 className="text-sm md:text-base font-semibold text-card-foreground">{feature.title}</h3>
-                  <p className="text-muted-foreground text-xs mt-0.5">{feature.description}</p>
-                </div>
+                <h3 className="text-base md:text-lg font-semibold text-card-foreground mb-1">{feature.title}</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>

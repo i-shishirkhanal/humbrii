@@ -1,6 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { User, CalendarCheck, Settings, Activity, LogOut } from "lucide-react";
+import { User, CalendarCheck, Settings, Activity, LogOut, ArrowRightLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -11,8 +10,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, roles } = useAuth();
   const navigate = useNavigate();
+  const isHost = roles.includes("host");
 
   const handleSignOut = async () => {
     await signOut();
@@ -40,38 +40,54 @@ const Navbar = () => {
                     <User className="w-5 h-5 text-primary" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 bg-background border border-border shadow-lg z-[100]">
+                <DropdownMenuContent align="end" className="w-52 bg-card border border-border shadow-xl z-[100]">
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard/bookings" className="flex items-center gap-2 cursor-pointer">
-                      <CalendarCheck className="w-4 h-4" />
-                      My Bookings
+                    <Link to="/dashboard/bookings" className="flex items-center gap-3 cursor-pointer py-2.5">
+                      <CalendarCheck className="w-4 h-4 text-primary" />
+                      <span>My Bookings</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard/profile" className="flex items-center gap-2 cursor-pointer">
-                      <User className="w-4 h-4" />
-                      Profile
+                    <Link to="/dashboard/profile" className="flex items-center gap-3 cursor-pointer py-2.5">
+                      <User className="w-4 h-4 text-primary" />
+                      <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard/settings" className="flex items-center gap-2 cursor-pointer">
-                      <Settings className="w-4 h-4" />
-                      Settings
+                    <Link to="/dashboard/settings" className="flex items-center gap-3 cursor-pointer py-2.5">
+                      <Settings className="w-4 h-4 text-primary" />
+                      <span>Settings</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
-                      <Activity className="w-4 h-4" />
-                      Activities
+                    <Link to="/dashboard" className="flex items-center gap-3 cursor-pointer py-2.5">
+                      <Activity className="w-4 h-4 text-primary" />
+                      <span>Activities</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  {isHost ? (
+                    <DropdownMenuItem asChild>
+                      <Link to="/host" className="flex items-center gap-3 cursor-pointer py-2.5 text-accent">
+                        <ArrowRightLeft className="w-4 h-4" />
+                        <span>Switch to Host</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem asChild>
+                      <Link to="/auth?mode=signup&role=host" className="flex items-center gap-3 cursor-pointer py-2.5 text-accent">
+                        <ArrowRightLeft className="w-4 h-4" />
+                        <span>Become a Host</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={handleSignOut}
-                    className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+                    className="flex items-center gap-3 cursor-pointer py-2.5 text-destructive focus:text-destructive"
                   >
                     <LogOut className="w-4 h-4" />
-                    Sign Out
+                    <span>Sign Out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
