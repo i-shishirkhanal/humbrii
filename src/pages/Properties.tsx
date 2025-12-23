@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import BottomNav from "@/components/layout/BottomNav";
 import PropertyCard from "@/components/cards/PropertyCard";
 import SearchWidget, { BookingType } from "@/components/search/SearchWidget";
 import { MapPin } from "lucide-react";
@@ -231,6 +232,7 @@ const Properties = () => {
       </main>
 
       <Footer />
+      <BottomNav />
     </div>
   );
 };
