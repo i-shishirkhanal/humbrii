@@ -23,6 +23,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
+  requestHostRole: () => Promise<{ error: Error | null }>;
+  refreshRoles: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -126,6 +128,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const hasRole = (role: AppRole) => roles.includes(role);
 
+  const refreshRoles = async () => {
+    if (!user) return;
+    const { data: rolesData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+    
+    if (rolesData) {
+      setRoles(rolesData.map((r) => r.role as AppRole));
+    }
+  };
+
+  const requestHostRole = async () => {
+    if (!user) return { error: new Error("Not authenticated") };
+    
+    // Check if already a host
+    if (roles.includes("host")) {
+      return { error: null };
+    }
+
+    // Insert host role
+    const { error } = await supabase
+      .from("user_roles")
+      .insert({ user_id: user.id, role: "host" });
+    
+    if (!error) {
+      await refreshRoles();
+    }
+    
+    return { error: error as Error | null };
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -138,6 +172,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signIn,
         signOut,
         hasRole,
+        requestHostRole,
+        refreshRoles,
       }}
     >
       {children}

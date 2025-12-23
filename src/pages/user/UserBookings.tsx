@@ -1,6 +1,9 @@
-import DashboardLayout from "@/components/layout/DashboardLayout";
+import Navbar from "@/components/layout/Navbar";
+import BottomNav from "@/components/layout/BottomNav";
 import BookingCard from "@/components/cards/BookingCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const mockBookings = [
   {
@@ -43,49 +46,63 @@ const UserBookings = () => {
   const pastBookings = mockBookings.filter(b => b.status === "completed");
 
   return (
-    <DashboardLayout role="user">
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">My Bookings</h1>
-          <p className="text-muted-foreground mt-1">Manage and view all your bookings</p>
-        </div>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      
+      <main className="pt-20 pb-24 md:pb-8">
+        <div className="container mx-auto px-4">
+          {/* Back Button */}
+          <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">Back to Home</span>
+          </Link>
 
-        <Tabs defaultValue="upcoming" className="w-full">
-          <TabsList>
-            <TabsTrigger value="upcoming">Upcoming ({upcomingBookings.length})</TabsTrigger>
-            <TabsTrigger value="past">Past ({pastBookings.length})</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="upcoming" className="mt-4">
-            <div className="space-y-4">
-              {upcomingBookings.length > 0 ? (
-                upcomingBookings.map((booking) => (
-                  <BookingCard key={booking.id} {...booking} />
-                ))
-              ) : (
-                <div className="bg-card rounded-xl border border-border p-8 text-center">
-                  <p className="text-muted-foreground">No upcoming bookings</p>
-                </div>
-              )}
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">My Bookings</h1>
+              <p className="text-muted-foreground mt-1">Manage and view all your bookings</p>
             </div>
-          </TabsContent>
-          
-          <TabsContent value="past" className="mt-4">
-            <div className="space-y-4">
-              {pastBookings.length > 0 ? (
-                pastBookings.map((booking) => (
-                  <BookingCard key={booking.id} {...booking} />
-                ))
-              ) : (
-                <div className="bg-card rounded-xl border border-border p-8 text-center">
-                  <p className="text-muted-foreground">No past bookings</p>
+
+            <Tabs defaultValue="upcoming" className="w-full">
+              <TabsList>
+                <TabsTrigger value="upcoming">Upcoming ({upcomingBookings.length})</TabsTrigger>
+                <TabsTrigger value="past">Past ({pastBookings.length})</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="upcoming" className="mt-4">
+                <div className="space-y-4">
+                  {upcomingBookings.length > 0 ? (
+                    upcomingBookings.map((booking) => (
+                      <BookingCard key={booking.id} {...booking} />
+                    ))
+                  ) : (
+                    <div className="bg-card rounded-xl border border-border p-8 text-center">
+                      <p className="text-muted-foreground">No upcoming bookings</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </DashboardLayout>
+              </TabsContent>
+              
+              <TabsContent value="past" className="mt-4">
+                <div className="space-y-4">
+                  {pastBookings.length > 0 ? (
+                    pastBookings.map((booking) => (
+                      <BookingCard key={booking.id} {...booking} />
+                    ))
+                  ) : (
+                    <div className="bg-card rounded-xl border border-border p-8 text-center">
+                      <p className="text-muted-foreground">No past bookings</p>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+      </main>
+
+      <BottomNav />
+    </div>
   );
 };
 
