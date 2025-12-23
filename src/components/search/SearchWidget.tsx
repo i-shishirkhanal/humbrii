@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,6 +68,17 @@ const getSearchFields = (type: BookingType) => {
   }
 };
 
+// Map booking type to database category
+const bookingTypeToCategory = (type: BookingType): string => {
+  switch (type) {
+    case "hourly": return "hourly";
+    case "daycation": return "daycation";
+    case "fullstay": return "full_stay";
+    case "vibe": return "vibe_chill";
+    default: return "full_stay";
+  }
+};
+
 const SearchWidget = ({
   activeType,
   onTypeChange,
@@ -75,6 +87,7 @@ const SearchWidget = ({
   navigateOnTabClick = false,
 }: SearchWidgetProps) => {
   const navigate = useNavigate();
+  const [searchValues, setSearchValues] = useState<Record<string, string>>({});
 
   const handleTypeClick = (type: BookingType) => {
     if (navigateOnTabClick) {
@@ -82,6 +95,39 @@ const SearchWidget = ({
     }
     onTypeChange?.(type);
   };
+
+  const handleInputChange = (fieldId: string, value: string) => {
+    setSearchValues((prev) => ({ ...prev, [fieldId]: value }));
+  };
+
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    params.set("type", activeType);
+    
+    if (searchValues.location) {
+      params.set("location", searchValues.location);
+    }
+    if (searchValues.date) {
+      params.set("date", searchValues.date);
+    }
+    if (searchValues.guests) {
+      params.set("guests", searchValues.guests);
+    }
+    if (searchValues.duration) {
+      params.set("duration", searchValues.duration);
+    }
+    if (searchValues.time) {
+      params.set("time", searchValues.time);
+    }
+
+    navigate(`/properties?${params.toString()}`);
+  };
+
+  const handleMapClick = () => {
+    const category = bookingTypeToCategory(activeType);
+    navigate(`/map?category=${category}`);
+  };
+
   const searchFields = getSearchFields(activeType);
 
   return (
@@ -136,6 +182,8 @@ const SearchWidget = ({
                   <input
                     type="text"
                     placeholder={field.placeholder}
+                    value={searchValues[field.id] || ""}
+                    onChange={(e) => handleInputChange(field.id, e.target.value)}
                     className="bg-transparent text-[11px] font-medium text-foreground placeholder:text-foreground/80 focus:outline-none w-full"
                   />
                 </div>
@@ -145,10 +193,13 @@ const SearchWidget = ({
           
           {/* Action Buttons Row */}
           <div className="flex items-center gap-2">
-            <button className="p-2 rounded-lg bg-card border border-border hover:border-primary/30 transition-colors flex-shrink-0">
+            <button 
+              onClick={handleMapClick}
+              className="p-2 rounded-lg bg-card border border-border hover:border-primary/30 transition-colors flex-shrink-0"
+            >
               <Map className="w-4 h-4 text-muted-foreground" />
             </button>
-            <Button size="sm" className="flex-1 h-9 rounded-lg text-xs">
+            <Button size="sm" className="flex-1 h-9 rounded-lg text-xs" onClick={handleSearch}>
               <Search className="w-4 h-4 mr-1.5" />
               Search
             </Button>
@@ -170,6 +221,8 @@ const SearchWidget = ({
                     <input
                       type="text"
                       placeholder={field.placeholder}
+                      value={searchValues[field.id] || ""}
+                      onChange={(e) => handleInputChange(field.id, e.target.value)}
                       className="bg-transparent text-sm font-medium text-foreground placeholder:text-foreground focus:outline-none w-full"
                     />
                   </div>
@@ -183,10 +236,13 @@ const SearchWidget = ({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-1.5">
-            <button className="p-2.5 rounded-lg bg-card border border-border hover:border-primary/30 transition-colors">
+            <button 
+              onClick={handleMapClick}
+              className="p-2.5 rounded-lg bg-card border border-border hover:border-primary/30 transition-colors"
+            >
               <Map className="w-4 h-4 text-muted-foreground" />
             </button>
-            <Button size="sm" className="h-10 px-4 rounded-lg">
+            <Button size="sm" className="h-10 px-4 rounded-lg" onClick={handleSearch}>
               <Search className="w-4 h-4" />
               <span className="ml-1.5">Search</span>
             </Button>
