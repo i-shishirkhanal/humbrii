@@ -369,23 +369,23 @@ const Index = () => {
       </section>
 
       {/* Who We Serve Section */}
-      <section className="py-8 md:py-12 bg-card/50">
+      <section className="py-6 md:py-8 bg-card/50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">Who We Serve</h2>
-            <p className="text-muted-foreground text-sm">Perfect stays for every need</p>
+          <div className="text-center mb-4">
+            <h2 className="text-base md:text-lg font-bold text-foreground mb-1">Who We Serve</h2>
+            <p className="text-muted-foreground text-xs">Perfect stays for every need</p>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide scroll-smooth md:justify-center" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide scroll-smooth md:justify-center" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
             {whoWeServe.map((item) => (
               <div
                 key={item.title}
-                className="flex-shrink-0 w-36 md:w-40 p-4 rounded-xl bg-card border border-border hover:border-primary/30 hover:shadow-medium transition-all text-center group"
+                className="flex-shrink-0 w-24 md:w-28 p-2.5 rounded-lg bg-card border border-border hover:border-primary/30 hover:shadow-sm transition-all text-center group"
               >
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                  <item.icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                  <item.icon className="w-4 h-4 text-primary" />
                 </div>
-                <h3 className="text-card-foreground font-semibold text-xs md:text-sm mb-1">{item.title}</h3>
-                <p className="text-muted-foreground text-[10px] md:text-xs leading-tight">{item.description}</p>
+                <h3 className="text-card-foreground font-medium text-[10px] md:text-xs mb-0.5 leading-tight">{item.title}</h3>
+                <p className="text-muted-foreground text-[8px] md:text-[10px] leading-tight">{item.description}</p>
               </div>
             ))}
           </div>
