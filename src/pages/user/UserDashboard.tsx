@@ -4,6 +4,7 @@ import BookingCard from "@/components/cards/BookingCard";
 import { Calendar, MapPin, CreditCard, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const mockBookings = [
   {
@@ -31,6 +32,9 @@ const mockBookings = [
 ];
 
 const UserDashboard = () => {
+  const { profile } = useAuth();
+  const displayName = profile?.full_name || "User";
+
   return (
     <DashboardLayout role="user">
       <div className="space-y-8">
@@ -38,7 +42,7 @@ const UserDashboard = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              Welcome back, John! 👋
+              Welcome back, {displayName}! 👋
             </h1>
             <p className="text-muted-foreground mt-1">
               Here's what's happening with your bookings
