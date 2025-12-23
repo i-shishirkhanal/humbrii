@@ -1,0 +1,92 @@
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import BookingCard from "@/components/cards/BookingCard";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const mockBookings = [
+  {
+    id: "1",
+    propertyName: "Himalayan View Resort",
+    propertyImage: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80",
+    location: "Pokhara, Nepal",
+    checkIn: "Dec 25, 2024",
+    checkOut: "Dec 28, 2024",
+    status: "confirmed" as const,
+    totalAmount: 25500,
+    bookingType: "full_stay" as const,
+  },
+  {
+    id: "2",
+    propertyName: "Heritage Boutique Hotel",
+    propertyImage: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&q=80",
+    location: "Bhaktapur, Nepal",
+    checkIn: "Jan 5, 2025",
+    checkOut: "Jan 6, 2025",
+    status: "pending" as const,
+    totalAmount: 6200,
+    bookingType: "daycation" as const,
+  },
+  {
+    id: "3",
+    propertyName: "Lakeside Paradise Villa",
+    propertyImage: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80",
+    location: "Pokhara, Nepal",
+    checkIn: "Nov 15, 2024",
+    checkOut: "Nov 18, 2024",
+    status: "completed" as const,
+    totalAmount: 36000,
+    bookingType: "full_stay" as const,
+  },
+];
+
+const UserBookings = () => {
+  const upcomingBookings = mockBookings.filter(b => b.status === "confirmed" || b.status === "pending");
+  const pastBookings = mockBookings.filter(b => b.status === "completed");
+
+  return (
+    <DashboardLayout role="user">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">My Bookings</h1>
+          <p className="text-muted-foreground mt-1">Manage and view all your bookings</p>
+        </div>
+
+        <Tabs defaultValue="upcoming" className="w-full">
+          <TabsList>
+            <TabsTrigger value="upcoming">Upcoming ({upcomingBookings.length})</TabsTrigger>
+            <TabsTrigger value="past">Past ({pastBookings.length})</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="upcoming" className="mt-4">
+            <div className="space-y-4">
+              {upcomingBookings.length > 0 ? (
+                upcomingBookings.map((booking) => (
+                  <BookingCard key={booking.id} {...booking} />
+                ))
+              ) : (
+                <div className="bg-card rounded-xl border border-border p-8 text-center">
+                  <p className="text-muted-foreground">No upcoming bookings</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="past" className="mt-4">
+            <div className="space-y-4">
+              {pastBookings.length > 0 ? (
+                pastBookings.map((booking) => (
+                  <BookingCard key={booking.id} {...booking} />
+                ))
+              ) : (
+                <div className="bg-card rounded-xl border border-border p-8 text-center">
+                  <p className="text-muted-foreground">No past bookings</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </DashboardLayout>
+  );
+};
+
+export default UserBookings;

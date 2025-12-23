@@ -3,6 +3,7 @@ import StatCard from "@/components/cards/StatCard";
 import { Building2, Calendar, Users, TrendingUp, Plus, Eye, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const mockProperties = [
   {
@@ -34,6 +35,8 @@ const upcomingCheckIns = [
 ];
 
 const HostDashboard = () => {
+  const { profile } = useAuth();
+
   return (
     <DashboardLayout role="host">
       <div className="space-y-8">
