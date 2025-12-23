@@ -14,6 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          booking_status: Database["public"]["Enums"]["booking_status"]
+          check_in_date: string
+          check_out_date: string
+          created_at: string
+          currency: string
+          guests: number
+          id: string
+          paid_amount: number
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          payment_type: string | null
+          property_id: string
+          room_id: string | null
+          special_requests: string | null
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          total_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          booking_status?: Database["public"]["Enums"]["booking_status"]
+          check_in_date: string
+          check_out_date: string
+          created_at?: string
+          currency?: string
+          guests?: number
+          id?: string
+          paid_amount?: number
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          payment_type?: string | null
+          property_id: string
+          room_id?: string | null
+          special_requests?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          total_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          booking_status?: Database["public"]["Enums"]["booking_status"]
+          check_in_date?: string
+          check_out_date?: string
+          created_at?: string
+          currency?: string
+          guests?: number
+          id?: string
+          paid_amount?: number
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          payment_type?: string | null
+          property_id?: string
+          room_id?: string | null
+          special_requests?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       host_payout_methods: {
         Row: {
           bank_account_holder: string | null
@@ -191,6 +269,51 @@ export type Database = {
         }
         Relationships: []
       }
+      property_availability: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          is_available: boolean
+          price_override: number | null
+          property_id: string
+          room_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          is_available?: boolean
+          price_override?: number | null
+          property_id: string
+          room_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          is_available?: boolean
+          price_override?: number | null
+          property_id?: string
+          room_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_availability_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_availability_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       property_ratings: {
         Row: {
           booking_id: string | null
@@ -324,6 +447,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "host" | "user"
+      booking_status: "pending" | "confirmed" | "cancelled" | "completed"
+      payment_status: "pending" | "partial" | "paid" | "refunded"
       property_category: "hourly" | "daycation" | "full_stay" | "vibe_chill"
     }
     CompositeTypes: {
@@ -453,6 +578,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "host", "user"],
+      booking_status: ["pending", "confirmed", "cancelled", "completed"],
+      payment_status: ["pending", "partial", "paid", "refunded"],
       property_category: ["hourly", "daycation", "full_stay", "vibe_chill"],
     },
   },
