@@ -7,11 +7,8 @@ import BottomNav from "@/components/layout/BottomNav";
 import PropertyCard from "@/components/cards/PropertyCard";
 import SearchWidget, { BookingType } from "@/components/search/SearchWidget";
 import {
-  Shield,
-  Heart,
   ArrowRight,
   Building2,
-  Clock,
   ChevronLeft,
   ChevronRight,
   Plane,
@@ -226,54 +223,31 @@ const vibeProperties = [
   },
 ];
 
-const features = [
-  {
-    icon: Shield,
-    title: "Verified Properties",
-    description: "Every property is verified for quality and authenticity.",
-  },
-  {
-    icon: Clock,
-    title: "Flexible Booking",
-    description: "Book by the hour, day, or full stay.",
-  },
-  {
-    icon: Heart,
-    title: "Best Price Guarantee",
-    description: "Find a lower price? We'll match it.",
-  },
-];
-
 const whoWeServe = [
   {
     icon: Plane,
     title: "Transit Travelers",
     description: "Early arrival or late departure",
-    color: "bg-sky-500/10 text-sky-400",
   },
   {
     icon: Briefcase,
     title: "Business & Meetings",
     description: "Rest or work between meetings",
-    color: "bg-amber-500/10 text-amber-400",
   },
   {
     icon: HeartPulse,
     title: "Medical Visits",
     description: "Comfort near hospitals",
-    color: "bg-rose-500/10 text-rose-400",
   },
   {
     icon: Home,
     title: "Domestic Travelers",
     description: "Flexible plans, short breaks",
-    color: "bg-orange-500/10 text-orange-400",
   },
   {
     icon: Laptop,
     title: "Remote Work",
     description: "Quiet space, fast Wi-Fi",
-    color: "bg-emerald-500/10 text-emerald-400",
   },
 ];
 
@@ -394,45 +368,24 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Who We Serve Section */}
       <section className="py-8 md:py-12 bg-card/50">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
-            {features.map((feature, index) => (
-              <div
-                key={feature.title}
-                className="group p-4 md:p-6 rounded-2xl bg-card border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300 animate-fade-up"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <feature.icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-                </div>
-                <h3 className="text-base md:text-lg font-semibold text-card-foreground mb-1">{feature.title}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Who We Serve Section */}
-      <section className="py-8 md:py-12 bg-gradient-dark">
-        <div className="container mx-auto px-4">
           <div className="text-center mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Who We Serve</h2>
-            <p className="text-white/60 text-sm">Perfect stays for every need</p>
+            <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">Who We Serve</h2>
+            <p className="text-muted-foreground text-sm">Perfect stays for every need</p>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide scroll-smooth md:justify-center" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-            {whoWeServe.map((item, index) => (
+            {whoWeServe.map((item) => (
               <div
                 key={item.title}
-                className="flex-shrink-0 w-36 md:w-40 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-center"
+                className="flex-shrink-0 w-36 md:w-40 p-4 rounded-xl bg-card border border-border hover:border-primary/30 hover:shadow-medium transition-all text-center group"
               >
-                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl ${item.color} flex items-center justify-center mx-auto mb-3`}>
-                  <item.icon className="w-5 h-5 md:w-6 md:h-6" />
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                  <item.icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
                 </div>
-                <h3 className="text-white font-semibold text-xs md:text-sm mb-1">{item.title}</h3>
-                <p className="text-white/50 text-[10px] md:text-xs leading-tight">{item.description}</p>
+                <h3 className="text-card-foreground font-semibold text-xs md:text-sm mb-1">{item.title}</h3>
+                <p className="text-muted-foreground text-[10px] md:text-xs leading-tight">{item.description}</p>
               </div>
             ))}
           </div>
