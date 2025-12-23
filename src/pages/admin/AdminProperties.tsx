@@ -5,13 +5,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Building2, MapPin, DollarSign, MoreVertical, CheckCircle, XCircle, Eye, EyeOff, Star, StarOff, Trash2 } from "lucide-react";
+import { Search, Building2, MapPin, DollarSign, MoreVertical, CheckCircle, XCircle, Eye, EyeOff, Star, StarOff, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -23,13 +26,35 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const CATEGORIES = ["hourly", "daycation", "full_stay", "vibe_chill"] as const;
 
 const AdminProperties = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "draft" | "suspended" | "featured">("all");
   const [deletePropertyId, setDeletePropertyId] = useState<string | null>(null);
+  const [featureDialogOpen, setFeatureDialogOpen] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState<string>("1");
+  const [categoryTab, setCategoryTab] = useState<string>("all");
   const queryClient = useQueryClient();
 
   const { data: properties, isLoading } = useQuery({
@@ -87,19 +112,45 @@ const AdminProperties = () => {
   };
 
   const handleSuspend = (id: string) => {
-    updatePropertyMutation.mutate({ id, updates: { status: "suspended", is_published: false } });
+    updatePropertyMutation.mutate({ id, updates: { status: "suspended", is_published: false, is_featured: false, featured_order: null } });
   };
 
   const handleTogglePublish = (id: string, currentStatus: boolean) => {
     updatePropertyMutation.mutate({ id, updates: { is_published: !currentStatus } });
   };
 
-  const handleToggleFeatured = (id: string, currentFeatured: boolean) => {
+  const handleOpenFeatureDialog = (property: any) => {
+    setSelectedProperty(property);
+    setSelectedOrder(property.featured_order?.toString() || "1");
+    setFeatureDialogOpen(true);
+  };
+
+  const handleFeatureProperty = () => {
+    if (!selectedProperty) return;
+    
+    updatePropertyMutation.mutate({ 
+      id: selectedProperty.id, 
+      updates: { 
+        is_featured: true,
+        featured_order: parseInt(selectedOrder)
+      } 
+    });
+    setFeatureDialogOpen(false);
+    setSelectedProperty(null);
+  };
+
+  const handleRemoveFeatured = (id: string) => {
     updatePropertyMutation.mutate({ 
       id, 
-      updates: { is_featured: !currentFeatured } 
+      updates: { is_featured: false, featured_order: null } 
     });
-    toast.success(currentFeatured ? "Removed from featured" : "Added to featured");
+  };
+
+  const handleUpdateOrder = (id: string, newOrder: number) => {
+    updatePropertyMutation.mutate({ 
+      id, 
+      updates: { featured_order: newOrder } 
+    });
   };
 
   const handleDelete = (id: string) => {
@@ -110,11 +161,19 @@ const AdminProperties = () => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.location.toLowerCase().includes(searchQuery.toLowerCase());
     
+    const matchesCategory = categoryTab === "all" || p.category === categoryTab;
+    
     if (statusFilter === "featured") {
-      return matchesSearch && (p as any).is_featured === true;
+      return matchesSearch && matchesCategory && p.is_featured === true;
     }
     const matchesStatus = statusFilter === "all" || p.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesCategory;
+  }).sort((a, b) => {
+    // Sort featured properties by their order
+    if (a.is_featured && b.is_featured) {
+      return (a.featured_order || 999) - (b.featured_order || 999);
+    }
+    return 0;
   });
 
   const getCategoryBadge = (category: string) => {
@@ -127,14 +186,66 @@ const AdminProperties = () => {
     return colors[category] || "bg-muted text-muted-foreground";
   };
 
-  const featuredCount = properties?.filter((p: any) => p.is_featured).length || 0;
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      hourly: "Hourly",
+      daycation: "Daycation",
+      full_stay: "Full Stay",
+      vibe_chill: "Vibe & Chill",
+    };
+    return labels[category] || category;
+  };
+
+  const featuredByCategory = CATEGORIES.reduce((acc, cat) => {
+    acc[cat] = properties?.filter(p => p.is_featured && p.category === cat)
+      .sort((a, b) => (a.featured_order || 999) - (b.featured_order || 999)) || [];
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  const totalFeatured = properties?.filter(p => p.is_featured).length || 0;
 
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Property Management</h1>
-          <p className="text-muted-foreground mt-1">Review, approve, and manage all properties</p>
+          <p className="text-muted-foreground mt-1">Review, approve, and manage all properties with featured ordering</p>
+        </div>
+
+        {/* Featured Properties Overview by Category */}
+        <div className="bg-card rounded-xl border border-border p-4">
+          <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Star className="w-4 h-4 text-primary" />
+            Featured Properties by Category ({totalFeatured} total)
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {CATEGORIES.map(cat => (
+              <div key={cat} className="bg-muted/50 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getCategoryBadge(cat)}`}>
+                    {getCategoryLabel(cat)}
+                  </span>
+                  <span className="text-sm text-muted-foreground">{featuredByCategory[cat]?.length || 0} featured</span>
+                </div>
+                <div className="space-y-1">
+                  {featuredByCategory[cat]?.slice(0, 3).map((p, idx) => (
+                    <div key={p.id} className="flex items-center gap-2 text-xs">
+                      <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center font-medium">
+                        {p.featured_order || idx + 1}
+                      </span>
+                      <span className="truncate text-foreground">{p.name}</span>
+                    </div>
+                  ))}
+                  {(featuredByCategory[cat]?.length || 0) > 3 && (
+                    <p className="text-xs text-muted-foreground ml-7">+{featuredByCategory[cat].length - 3} more</p>
+                  )}
+                  {!featuredByCategory[cat]?.length && (
+                    <p className="text-xs text-muted-foreground">No featured properties</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Stats */}
@@ -156,10 +267,20 @@ const AdminProperties = () => {
             <p className="text-sm text-muted-foreground">Suspended</p>
           </div>
           <div className="bg-card rounded-xl border border-border p-4">
-            <p className="text-2xl font-bold text-primary">{featuredCount}</p>
+            <p className="text-2xl font-bold text-primary">{totalFeatured}</p>
             <p className="text-sm text-muted-foreground">Featured</p>
           </div>
         </div>
+
+        {/* Category Tabs */}
+        <Tabs value={categoryTab} onValueChange={setCategoryTab}>
+          <TabsList className="w-full md:w-auto">
+            <TabsTrigger value="all">All Categories</TabsTrigger>
+            {CATEGORIES.map(cat => (
+              <TabsTrigger key={cat} value={cat}>{getCategoryLabel(cat)}</TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
@@ -198,6 +319,7 @@ const AdminProperties = () => {
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Category</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Price</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Featured Position</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Created</th>
                   <th className="text-right p-4 text-sm font-medium text-muted-foreground">Actions</th>
                 </tr>
@@ -205,13 +327,13 @@ const AdminProperties = () => {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
                       Loading properties...
                     </td>
                   </tr>
                 ) : filteredProperties?.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
                       No properties found
                     </td>
                   </tr>
@@ -247,7 +369,7 @@ const AdminProperties = () => {
                       </td>
                       <td className="p-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryBadge(property.category)}`}>
-                          {property.category.replace("_", " ")}
+                          {getCategoryLabel(property.category)}
                         </span>
                       </td>
                       <td className="p-4">
@@ -267,10 +389,39 @@ const AdminProperties = () => {
                           {property.is_published && (
                             <Badge variant="outline">Published</Badge>
                           )}
-                          {property.is_featured && (
-                            <Badge className="bg-primary/10 text-primary border-primary/20">Featured</Badge>
-                          )}
                         </div>
+                      </td>
+                      <td className="p-4">
+                        {property.is_featured ? (
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
+                              <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                                {property.featured_order || "-"}
+                              </span>
+                              <span className="text-xs text-muted-foreground">in {getCategoryLabel(property.category)}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6"
+                                onClick={() => handleUpdateOrder(property.id, Math.max(1, (property.featured_order || 1) - 1))}
+                              >
+                                <ArrowUp className="w-3 h-3" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6"
+                                onClick={() => handleUpdateOrder(property.id, (property.featured_order || 1) + 1)}
+                              >
+                                <ArrowDown className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Not featured</span>
+                        )}
                       </td>
                       <td className="p-4 text-sm text-muted-foreground">
                         {format(new Date(property.created_at), "MMM d, yyyy")}
@@ -282,7 +433,7 @@ const AdminProperties = () => {
                               <MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuContent align="end" className="w-56">
                             {property.status !== "active" && (
                               <DropdownMenuItem onClick={() => handleApprove(property.id)}>
                                 <CheckCircle className="w-4 h-4 mr-2 text-success" />
@@ -302,19 +453,37 @@ const AdminProperties = () => {
                                 </>
                               )}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleToggleFeatured(property.id, property.is_featured || false)}>
-                              {property.is_featured ? (
-                                <>
+                            <DropdownMenuSeparator />
+                            {property.is_featured ? (
+                              <>
+                                <DropdownMenuSub>
+                                  <DropdownMenuSubTrigger>
+                                    <ArrowUp className="w-4 h-4 mr-2" />
+                                    Change Position
+                                  </DropdownMenuSubTrigger>
+                                  <DropdownMenuSubContent>
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                                      <DropdownMenuItem 
+                                        key={num} 
+                                        onClick={() => handleUpdateOrder(property.id, num)}
+                                        className={property.featured_order === num ? "bg-primary/10" : ""}
+                                      >
+                                        Position {num} {property.featured_order === num && "(current)"}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                                <DropdownMenuItem onClick={() => handleRemoveFeatured(property.id)}>
                                   <StarOff className="w-4 h-4 mr-2" />
                                   Remove from Featured
-                                </>
-                              ) : (
-                                <>
-                                  <Star className="w-4 h-4 mr-2 text-primary" />
-                                  Add to Featured
-                                </>
-                              )}
-                            </DropdownMenuItem>
+                                </DropdownMenuItem>
+                              </>
+                            ) : (
+                              <DropdownMenuItem onClick={() => handleOpenFeatureDialog(property)}>
+                                <Star className="w-4 h-4 mr-2 text-primary" />
+                                Add to Featured
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             {property.status !== "suspended" && (
                               <DropdownMenuItem 
@@ -343,6 +512,45 @@ const AdminProperties = () => {
           </div>
         </div>
       </div>
+
+      {/* Feature Dialog */}
+      <Dialog open={featureDialogOpen} onOpenChange={setFeatureDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Feature Property</DialogTitle>
+            <DialogDescription>
+              Set the featured position for "{selectedProperty?.name}" in the {getCategoryLabel(selectedProperty?.category || "")} category.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Featured Position</label>
+              <Select value={selectedOrder} onValueChange={setSelectedOrder}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select position" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                    <SelectItem key={num} value={num.toString()}>
+                      Position {num} {num === 1 && "(First)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                This property will appear at position {selectedOrder} in the {getCategoryLabel(selectedProperty?.category || "")} section on the homepage.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFeatureDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleFeatureProperty}>
+              <Star className="w-4 h-4 mr-2" />
+              Feature Property
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deletePropertyId} onOpenChange={() => setDeletePropertyId(null)}>

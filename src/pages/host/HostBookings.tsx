@@ -1,7 +1,9 @@
 import HostLayout from "@/components/layout/HostLayout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, X, Clock, Calendar } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Check, X, Clock, Calendar, DollarSign, AlertCircle, CheckCircle2 } from "lucide-react";
 
 const mockBookings = [
   {
@@ -13,7 +15,11 @@ const mockBookings = [
     checkIn: "Dec 25, 2024",
     checkOut: "Dec 28, 2024",
     guests: 2,
-    amount: "NPR 25,500",
+    totalAmount: 25500,
+    paidAmount: 25500,
+    remainingAmount: 0,
+    paymentStatus: "full",
+    paymentMethod: "eSewa",
     status: "pending",
   },
   {
@@ -25,7 +31,11 @@ const mockBookings = [
     checkIn: "Dec 26, 2024",
     checkOut: "Dec 27, 2024",
     guests: 4,
-    amount: "NPR 12,000",
+    totalAmount: 12000,
+    paidAmount: 6000,
+    remainingAmount: 6000,
+    paymentStatus: "partial",
+    paymentMethod: "Khalti",
     status: "confirmed",
   },
   {
@@ -37,8 +47,28 @@ const mockBookings = [
     checkIn: "Dec 20, 2024",
     checkOut: "Dec 22, 2024",
     guests: 2,
-    amount: "NPR 8,500",
+    totalAmount: 8500,
+    paidAmount: 8500,
+    remainingAmount: 0,
+    paymentStatus: "full",
+    paymentMethod: "Bank Transfer",
     status: "completed",
+  },
+  {
+    id: "4",
+    guestName: "Maya Rai",
+    guestEmail: "maya@example.com",
+    property: "City Center Stay",
+    roomType: "Economy",
+    checkIn: "Dec 30, 2024",
+    checkOut: "Jan 2, 2025",
+    guests: 3,
+    totalAmount: 18000,
+    paidAmount: 5000,
+    remainingAmount: 13000,
+    paymentStatus: "partial",
+    paymentMethod: "Cash",
+    status: "pending",
   },
 ];
 
@@ -46,6 +76,20 @@ const HostBookings = () => {
   const pendingBookings = mockBookings.filter(b => b.status === "pending");
   const confirmedBookings = mockBookings.filter(b => b.status === "confirmed");
   const completedBookings = mockBookings.filter(b => b.status === "completed");
+
+  const totalRevenue = mockBookings.reduce((acc, b) => acc + b.paidAmount, 0);
+  const pendingPayments = mockBookings.reduce((acc, b) => acc + b.remainingAmount, 0);
+  const fullyPaidCount = mockBookings.filter(b => b.paymentStatus === "full").length;
+  const partialPaidCount = mockBookings.filter(b => b.paymentStatus === "partial").length;
+
+  const getPaymentBadge = (booking: typeof mockBookings[0]) => {
+    if (booking.paymentStatus === "full") {
+      return <Badge className="bg-success/10 text-success border-success/20 text-xs">Fully Paid</Badge>;
+    } else if (booking.paymentStatus === "partial") {
+      return <Badge className="bg-warning/10 text-warning border-warning/20 text-xs">Partial ({Math.round((booking.paidAmount / booking.totalAmount) * 100)}%)</Badge>;
+    }
+    return <Badge variant="destructive" className="text-xs">Unpaid</Badge>;
+  };
 
   const BookingRow = ({ booking }: { booking: typeof mockBookings[0] }) => (
     <tr className="hover:bg-muted/30 transition-colors">
@@ -60,7 +104,23 @@ const HostBookings = () => {
       <td className="px-4 py-3 text-sm text-muted-foreground">
         {booking.checkIn} - {booking.checkOut}
       </td>
-      <td className="px-4 py-3 text-sm font-medium text-card-foreground">{booking.amount}</td>
+      <td className="px-4 py-3">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-card-foreground">NPR {booking.totalAmount.toLocaleString()}</p>
+          <p className="text-xs text-success">Paid: NPR {booking.paidAmount.toLocaleString()}</p>
+          {booking.remainingAmount > 0 && (
+            <p className="text-xs text-warning">Due: NPR {booking.remainingAmount.toLocaleString()}</p>
+          )}
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <div className="space-y-1">
+          {getPaymentBadge(booking)}
+          <div className="w-20">
+            <Progress value={(booking.paidAmount / booking.totalAmount) * 100} className="h-1.5" />
+          </div>
+        </div>
+      </td>
       <td className="px-4 py-3">
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
           booking.status === "confirmed" ? "bg-success/10 text-success" :
@@ -106,7 +166,33 @@ const HostBookings = () => {
       <div className="space-y-2 text-sm">
         <p className="text-muted-foreground">{booking.property} • {booking.roomType}</p>
         <p className="text-muted-foreground">{booking.checkIn} - {booking.checkOut}</p>
-        <p className="font-semibold text-card-foreground">{booking.amount}</p>
+        
+        {/* Payment Details */}
+        <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Total:</span>
+            <span className="font-semibold text-card-foreground">NPR {booking.totalAmount.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Paid:</span>
+            <span className="font-medium text-success">NPR {booking.paidAmount.toLocaleString()}</span>
+          </div>
+          {booking.remainingAmount > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Remaining:</span>
+              <span className="font-medium text-warning">NPR {booking.remainingAmount.toLocaleString()}</span>
+            </div>
+          )}
+          <div className="pt-1">
+            <Progress value={(booking.paidAmount / booking.totalAmount) * 100} className="h-2" />
+            <p className="text-xs text-muted-foreground mt-1 text-center">
+              {Math.round((booking.paidAmount / booking.totalAmount) * 100)}% paid via {booking.paymentMethod}
+            </p>
+          </div>
+          <div className="pt-1">
+            {getPaymentBadge(booking)}
+          </div>
+        </div>
       </div>
       {booking.status === "pending" && (
         <div className="mt-3 flex items-center gap-2">
@@ -128,7 +214,39 @@ const HostBookings = () => {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Bookings</h1>
-          <p className="text-muted-foreground mt-1">Manage guest bookings for your properties</p>
+          <p className="text-muted-foreground mt-1">Manage guest bookings and payments for your properties</p>
+        </div>
+
+        {/* Payment Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-card rounded-xl border border-border p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <DollarSign className="w-4 h-4 text-success" />
+              <span className="text-sm text-muted-foreground">Total Collected</span>
+            </div>
+            <p className="text-xl font-bold text-success">NPR {totalRevenue.toLocaleString()}</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <AlertCircle className="w-4 h-4 text-warning" />
+              <span className="text-sm text-muted-foreground">Pending Payments</span>
+            </div>
+            <p className="text-xl font-bold text-warning">NPR {pendingPayments.toLocaleString()}</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              <span className="text-sm text-muted-foreground">Fully Paid</span>
+            </div>
+            <p className="text-xl font-bold text-foreground">{fullyPaidCount} bookings</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className="w-4 h-4 text-warning" />
+              <span className="text-sm text-muted-foreground">Partial Payments</span>
+            </div>
+            <p className="text-xl font-bold text-foreground">{partialPaidCount} bookings</p>
+          </div>
         </div>
 
         {mockBookings.length === 0 ? (
@@ -162,6 +280,7 @@ const HostBookings = () => {
                           <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Room</th>
                           <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Dates</th>
                           <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Amount</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Payment</th>
                           <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
                           <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Actions</th>
                         </tr>

@@ -98,6 +98,7 @@ export type Database = {
           created_at: string
           currency: string | null
           description: string | null
+          featured_order: number | null
           host_id: string
           hourly_available_slots: string[] | null
           hourly_end_time: string | null
@@ -120,6 +121,7 @@ export type Database = {
           created_at?: string
           currency?: string | null
           description?: string | null
+          featured_order?: number | null
           host_id: string
           hourly_available_slots?: string[] | null
           hourly_end_time?: string | null
@@ -142,6 +144,7 @@ export type Database = {
           created_at?: string
           currency?: string | null
           description?: string | null
+          featured_order?: number | null
           host_id?: string
           hourly_available_slots?: string[] | null
           hourly_end_time?: string | null
