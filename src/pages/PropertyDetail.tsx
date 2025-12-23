@@ -53,10 +53,10 @@ const samplePropertyData = {
   name: "Himalayan View Resort",
   location: "Pokhara, Nepal",
   images: [
-    "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=1200&q=80",
-    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&q=80",
-    "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1200&q=80",
-    "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=80",
+    "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=1920&q=90&fit=crop",
+    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1920&q=90&fit=crop",
+    "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1920&q=90&fit=crop",
+    "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1920&q=90&fit=crop",
   ],
   rating: 4.9,
   reviews: 128,
@@ -172,33 +172,34 @@ const PropertyDetail = () => {
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 py-6 pt-20 md:pt-24">
         {/* Image Gallery */}
         <div className="relative rounded-xl overflow-hidden mb-6">
           <div className="aspect-[16/9] md:aspect-[21/9]">
             <img
-              src={property.images[currentImage]}
+              src={`${property.images[currentImage]}${property.images[currentImage].includes('unsplash') ? '&w=1920&q=90&fit=crop' : ''}`}
               alt={property.name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-center"
+              loading="eager"
             />
           </div>
           
           {/* Navigation Arrows */}
           <button
             onClick={prevImage}
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors"
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors z-10"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <button
             onClick={nextImage}
-            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors"
+            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors z-10"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
 
           {/* Image Indicators */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
             {property.images.map((_, idx) => (
               <button
                 key={idx}
@@ -211,27 +212,27 @@ const PropertyDetail = () => {
             ))}
           </div>
 
-          {/* Action Buttons */}
-          <div className="absolute top-4 right-4 flex gap-2">
+          {/* Action Buttons - moved down to avoid navbar overlap */}
+          <div className="absolute top-4 right-4 flex gap-2 z-10">
             <button
               onClick={toggleFavorite}
               className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                "w-10 h-10 rounded-full flex items-center justify-center transition-colors shadow-lg",
                 isFavorite 
                   ? "bg-primary text-primary-foreground" 
-                  : "bg-background/80 backdrop-blur-sm hover:bg-background"
+                  : "bg-background/90 backdrop-blur-sm hover:bg-background"
               )}
             >
               <Heart className={cn("w-5 h-5", isFavorite && "fill-current")} />
             </button>
-            <button className="w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors">
+            <button className="w-10 h-10 rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors shadow-lg">
               <Share2 className="w-5 h-5" />
             </button>
           </div>
 
           {/* Property Type Badge */}
-          <div className="absolute top-4 left-4">
-            <span className="px-3 py-1 bg-primary text-primary-foreground rounded-full text-sm font-medium">
+          <div className="absolute top-4 left-4 z-10">
+            <span className="px-3 py-1 bg-primary text-primary-foreground rounded-full text-sm font-medium shadow-lg">
               {getCategoryLabel(property.category)}
             </span>
           </div>
