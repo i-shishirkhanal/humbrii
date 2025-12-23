@@ -1,24 +1,38 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, User, Mail, Phone, Calendar, MoreVertical, Shield, UserX } from "lucide-react";
+import { Search, User, Phone, Calendar, MoreVertical, Shield, UserX, UserCheck } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 const AdminUsers = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | "user" | "host" | "admin">("all");
+  const [removeRoleDialog, setRemoveRoleDialog] = useState<{ userId: string; role: string } | null>(null);
+  const queryClient = useQueryClient();
 
-  const { data: profiles, isLoading, refetch } = useQuery({
+  const { data: profiles, isLoading } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -31,7 +45,7 @@ const AdminUsers = () => {
     },
   });
 
-  const { data: userRoles } = useQuery({
+  const { data: userRoles, refetch: refetchRoles } = useQuery({
     queryKey: ["admin-user-roles"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -43,58 +57,128 @@ const AdminUsers = () => {
     },
   });
 
+  const addRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: "admin" | "host" | "user" }) => {
+      const { error } = await supabase
+        .from("user_roles")
+        .insert({ user_id: userId, role: role });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-user-roles"] });
+      toast.success("Role added successfully");
+    },
+    onError: (error: any) => {
+      if (error.message?.includes("duplicate")) {
+        toast.error("User already has this role");
+      } else {
+        toast.error("Failed to add role");
+      }
+    },
+  });
+
+  const removeRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: "admin" | "host" | "user" }) => {
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .eq("role", role);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-user-roles"] });
+      toast.success("Role removed successfully");
+      setRemoveRoleDialog(null);
+    },
+    onError: () => {
+      toast.error("Failed to remove role");
+    },
+  });
+
   const getRolesForUser = (userId: string) => {
     return userRoles?.filter(r => r.user_id === userId).map(r => r.role) || [];
   };
 
-  const handleMakeAdmin = async (userId: string) => {
-    const { error } = await supabase
-      .from("user_roles")
-      .insert({ user_id: userId, role: "admin" });
-    
-    if (error) {
-      toast.error("Failed to make user admin");
-    } else {
-      toast.success("User is now an admin");
-      refetch();
-    }
+  const handleAddRole = (userId: string, role: "admin" | "host" | "user") => {
+    addRoleMutation.mutate({ userId, role });
   };
 
-  const handleMakeHost = async (userId: string) => {
-    const { error } = await supabase
-      .from("user_roles")
-      .insert({ user_id: userId, role: "host" });
-    
-    if (error) {
-      toast.error("Failed to make user a host");
-    } else {
-      toast.success("User is now a host");
-      refetch();
+  const handleRemoveRole = () => {
+    if (removeRoleDialog) {
+      removeRoleMutation.mutate({ 
+        userId: removeRoleDialog.userId, 
+        role: removeRoleDialog.role as "admin" | "host" | "user" 
+      });
     }
   };
+  const filteredProfiles = profiles?.filter(p => {
+    const matchesSearch = p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.phone?.includes(searchQuery);
+    
+    if (roleFilter === "all") return matchesSearch;
+    
+    const roles = getRolesForUser(p.user_id);
+    return matchesSearch && roles.includes(roleFilter);
+  });
 
-  const filteredProfiles = profiles?.filter(p => 
-    p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.phone?.includes(searchQuery)
-  );
+  const userCount = profiles?.length || 0;
+  const hostCount = userRoles?.filter(r => r.role === "host").length || 0;
+  const adminCount = userRoles?.filter(r => r.role === "admin").length || 0;
 
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">User Management</h1>
-          <p className="text-muted-foreground mt-1">Manage all registered users</p>
+          <p className="text-muted-foreground mt-1">Manage all registered users and their roles</p>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search users..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-card rounded-xl border border-border p-4">
+            <p className="text-2xl font-bold text-foreground">{userCount}</p>
+            <p className="text-sm text-muted-foreground">Total Users</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <p className="text-2xl font-bold text-success">{hostCount}</p>
+            <p className="text-sm text-muted-foreground">Hosts</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <p className="text-2xl font-bold text-primary">{adminCount}</p>
+            <p className="text-sm text-muted-foreground">Admins</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <p className="text-2xl font-bold text-muted-foreground">{userCount - hostCount}</p>
+            <p className="text-sm text-muted-foreground">Regular Users</p>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search users..."
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            {(["all", "user", "host", "admin"] as const).map((role) => (
+              <Button
+                key={role}
+                variant={roleFilter === role ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRoleFilter(role)}
+              >
+                {role.charAt(0).toUpperCase() + role.slice(1)}s
+              </Button>
+            ))}
+          </div>
         </div>
 
         {/* Users Table */}
@@ -126,6 +210,9 @@ const AdminUsers = () => {
                 ) : (
                   filteredProfiles?.map((profile) => {
                     const roles = getRolesForUser(profile.user_id);
+                    const isHost = roles.includes("host");
+                    const isAdmin = roles.includes("admin");
+                    
                     return (
                       <tr key={profile.id} className="border-b border-border last:border-0 hover:bg-muted/30">
                         <td className="p-4">
@@ -139,7 +226,7 @@ const AdminUsers = () => {
                             </div>
                             <div>
                               <p className="font-medium text-foreground">{profile.full_name || "Unnamed User"}</p>
-                              <p className="text-xs text-muted-foreground">{profile.user_id.slice(0, 8)}...</p>
+                              <p className="text-xs text-muted-foreground font-mono">{profile.user_id.slice(0, 8)}...</p>
                             </div>
                           </div>
                         </td>
@@ -155,9 +242,11 @@ const AdminUsers = () => {
                               <Badge 
                                 key={role} 
                                 variant={role === "admin" ? "destructive" : role === "host" ? "default" : "secondary"}
-                                className="text-xs"
+                                className="text-xs cursor-pointer"
+                                onClick={() => role !== "user" && setRemoveRoleDialog({ userId: profile.user_id, role })}
                               >
                                 {role}
+                                {role !== "user" && " ×"}
                               </Badge>
                             ))}
                           </div>
@@ -175,17 +264,36 @@ const AdminUsers = () => {
                                 <MoreVertical className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {!roles.includes("host") && (
-                                <DropdownMenuItem onClick={() => handleMakeHost(profile.user_id)}>
-                                  <Shield className="w-4 h-4 mr-2" />
+                            <DropdownMenuContent align="end" className="w-48">
+                              {!isHost && (
+                                <DropdownMenuItem onClick={() => handleAddRole(profile.user_id, "host")}>
+                                  <UserCheck className="w-4 h-4 mr-2 text-success" />
                                   Make Host
                                 </DropdownMenuItem>
                               )}
-                              {!roles.includes("admin") && (
-                                <DropdownMenuItem onClick={() => handleMakeAdmin(profile.user_id)}>
-                                  <Shield className="w-4 h-4 mr-2" />
+                              {!isAdmin && (
+                                <DropdownMenuItem onClick={() => handleAddRole(profile.user_id, "admin")}>
+                                  <Shield className="w-4 h-4 mr-2 text-primary" />
                                   Make Admin
+                                </DropdownMenuItem>
+                              )}
+                              {(isHost || isAdmin) && <DropdownMenuSeparator />}
+                              {isHost && (
+                                <DropdownMenuItem 
+                                  onClick={() => setRemoveRoleDialog({ userId: profile.user_id, role: "host" })}
+                                  className="text-warning"
+                                >
+                                  <UserX className="w-4 h-4 mr-2" />
+                                  Remove Host Role
+                                </DropdownMenuItem>
+                              )}
+                              {isAdmin && (
+                                <DropdownMenuItem 
+                                  onClick={() => setRemoveRoleDialog({ userId: profile.user_id, role: "admin" })}
+                                  className="text-destructive"
+                                >
+                                  <UserX className="w-4 h-4 mr-2" />
+                                  Remove Admin Role
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
@@ -200,6 +308,24 @@ const AdminUsers = () => {
           </div>
         </div>
       </div>
+
+      {/* Remove Role Confirmation Dialog */}
+      <AlertDialog open={!!removeRoleDialog} onOpenChange={() => setRemoveRoleDialog(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Role</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove the {removeRoleDialog?.role} role from this user?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemoveRole}>
+              Remove Role
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
