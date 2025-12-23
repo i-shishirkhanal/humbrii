@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import { X, Clock, Sun, Moon, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,40 +9,11 @@ import "leaflet/dist/leaflet.css";
 
 type PropertyCategory = "hourly" | "daycation" | "full_stay" | "vibe_chill";
 
-const categoryConfig: Record<PropertyCategory, { label: string; icon: typeof Clock; color: string }> = {
-  hourly: { label: "Hourly", icon: Clock, color: "#f59e0b" },
-  daycation: { label: "Daycation", icon: Sun, color: "#10b981" },
-  full_stay: { label: "Full Stay", icon: Moon, color: "#6366f1" },
-  vibe_chill: { label: "Vibe & Chill", icon: Zap, color: "#ec4899" },
-};
-
-// Create custom marker icons for each category
-const createCategoryIcon = (category: PropertyCategory) => {
-  const color = categoryConfig[category].color;
-  return L.divIcon({
-    className: "custom-marker",
-    html: `
-      <div style="
-        background-color: ${color};
-        width: 36px;
-        height: 36px;
-        border-radius: 50% 50% 50% 0;
-        transform: rotate(-45deg);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        border: 2px solid white;
-      ">
-        <div style="transform: rotate(45deg); color: white; font-weight: bold; font-size: 14px;">
-          ${category === "hourly" ? "⏰" : category === "daycation" ? "☀️" : category === "full_stay" ? "🌙" : "⚡"}
-        </div>
-      </div>
-    `,
-    iconSize: [36, 36],
-    iconAnchor: [18, 36],
-    popupAnchor: [0, -36],
-  });
+const categoryConfig: Record<PropertyCategory, { label: string; icon: typeof Clock; color: string; emoji: string }> = {
+  hourly: { label: "Hourly", icon: Clock, color: "#f59e0b", emoji: "⏰" },
+  daycation: { label: "Daycation", icon: Sun, color: "#10b981", emoji: "☀️" },
+  full_stay: { label: "Full Stay", icon: Moon, color: "#6366f1", emoji: "🌙" },
+  vibe_chill: { label: "Vibe & Chill", icon: Zap, color: "#ec4899", emoji: "⚡" },
 };
 
 // Nepal locations with coordinates
@@ -61,19 +31,22 @@ const locationCoordinates: Record<string, [number, number]> = {
 const getCoordinatesFromLocation = (location: string): [number, number] => {
   for (const [city, coords] of Object.entries(locationCoordinates)) {
     if (location.toLowerCase().includes(city.toLowerCase())) {
-      // Add slight randomization to prevent markers stacking
       return [
         coords[0] + (Math.random() - 0.5) * 0.02,
         coords[1] + (Math.random() - 0.5) * 0.02,
       ];
     }
   }
-  return [27.7172, 85.3240]; // Default to Kathmandu
+  return [27.7172, 85.3240];
 };
 
 const MapView = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const mapRef = useRef<L.Map | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const markersRef = useRef<L.Marker[]>([]);
+  
   const initialCategory = searchParams.get("category") as PropertyCategory | null;
   const [activeCategories, setActiveCategories] = useState<PropertyCategory[]>(
     initialCategory ? [initialCategory] : ["hourly", "daycation", "full_stay", "vibe_chill"]
@@ -104,6 +77,92 @@ const MapView = () => {
   const filteredProperties = properties.filter((p) =>
     activeCategories.includes(p.category as PropertyCategory)
   );
+
+  // Initialize map
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    mapRef.current = L.map(mapContainerRef.current).setView([27.7172, 85.3240], 8);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(mapRef.current);
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update markers when filtered properties change
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Clear existing markers
+    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current = [];
+
+    // Add new markers
+    filteredProperties.forEach((property) => {
+      const coords = getCoordinatesFromLocation(property.location);
+      const category = property.category as PropertyCategory;
+      const config = categoryConfig[category];
+
+      const icon = L.divIcon({
+        className: "custom-marker",
+        html: `
+          <div style="
+            background-color: ${config.color};
+            width: 36px;
+            height: 36px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            border: 2px solid white;
+          ">
+            <div style="transform: rotate(45deg); font-size: 14px;">
+              ${config.emoji}
+            </div>
+          </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 36],
+        popupAnchor: [0, -36],
+      });
+
+      const marker = L.marker(coords, { icon }).addTo(mapRef.current!);
+
+      const popupContent = `
+        <div style="min-width: 200px;">
+          ${property.images?.[0] ? `<img src="${property.images[0]}" alt="${property.name}" style="width: 100%; height: 96px; object-fit: cover; border-radius: 8px 8px 0 0; margin-bottom: 8px;" />` : ""}
+          <h3 style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${property.name}</h3>
+          <p style="font-size: 12px; color: #666; margin-bottom: 8px;">${property.location}</p>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-size: 12px; padding: 2px 8px; border-radius: 9999px; color: white; background-color: ${config.color};">
+              ${config.label}
+            </span>
+            <span style="font-weight: 600; font-size: 14px;">
+              ${property.currency} ${property.base_price}
+            </span>
+          </div>
+          <button 
+            onclick="window.location.href='/property/${property.id}'"
+            style="width: 100%; padding: 8px; background: hsl(var(--primary)); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;"
+          >
+            View Details
+          </button>
+        </div>
+      `;
+
+      marker.bindPopup(popupContent);
+      markersRef.current.push(marker);
+    });
+  }, [filteredProperties, navigate]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
@@ -148,61 +207,8 @@ const MapView = () => {
         </div>
       </div>
 
-      {/* Map */}
-      <MapContainer
-        center={[27.7172, 85.3240]}
-        zoom={8}
-        className="w-full h-full"
-        style={{ zIndex: 1 }}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        {filteredProperties.map((property) => {
-          const coords = getCoordinatesFromLocation(property.location);
-          const category = property.category as PropertyCategory;
-          return (
-            <Marker
-              key={property.id}
-              position={coords}
-              icon={createCategoryIcon(category)}
-            >
-              <Popup>
-                <div className="min-w-[200px]">
-                  {property.images?.[0] && (
-                    <img
-                      src={property.images[0]}
-                      alt={property.name}
-                      className="w-full h-24 object-cover rounded-t-lg mb-2"
-                    />
-                  )}
-                  <h3 className="font-semibold text-sm mb-1">{property.name}</h3>
-                  <p className="text-xs text-muted-foreground mb-2">{property.location}</p>
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="text-xs px-2 py-0.5 rounded-full text-white"
-                      style={{ backgroundColor: categoryConfig[category].color }}
-                    >
-                      {categoryConfig[category].label}
-                    </span>
-                    <span className="font-semibold text-sm">
-                      {property.currency} {property.base_price}
-                    </span>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="w-full mt-2"
-                    onClick={() => navigate(`/property/${property.id}`)}
-                  >
-                    View Details
-                  </Button>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-      </MapContainer>
+      {/* Map Container */}
+      <div ref={mapContainerRef} className="w-full h-full" style={{ zIndex: 1 }} />
 
       {/* Properties count */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000]">
