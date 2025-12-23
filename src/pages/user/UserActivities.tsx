@@ -31,7 +31,7 @@ const mockBookings = [
   },
 ];
 
-const UserDashboard = () => {
+const UserActivities = () => {
   const { profile } = useAuth();
   const displayName = profile?.full_name || "User";
 
@@ -42,10 +42,10 @@ const UserDashboard = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              Welcome back, {displayName}! 👋
+              Your Activities
             </h1>
             <p className="text-muted-foreground mt-1">
-              Here's what's happening with your bookings
+              Track your bookings and travel history
             </p>
           </div>
           <Link to="/properties">
@@ -124,4 +124,4 @@ const UserDashboard = () => {
   );
 };
 
-export default UserDashboard;
+export default UserActivities;
