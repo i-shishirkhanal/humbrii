@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
+import PropertyMap from "@/components/map/PropertyMap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +28,7 @@ import {
   Check,
   Shield,
   Clock,
+  Map,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -285,6 +287,22 @@ const PropertyDetail = () => {
                   </li>
                 ))}
               </ul>
+            </div>
+
+            {/* Location Map */}
+            <div>
+              <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
+                <Map className="w-5 h-5 text-primary" />
+                Location
+              </h2>
+              <p className="text-muted-foreground mb-3 flex items-center gap-1">
+                <MapPin className="w-4 h-4" />
+                {property.location}
+              </p>
+              <PropertyMap 
+                location={property.location} 
+                propertyName={property.name} 
+              />
             </div>
           </div>
 
