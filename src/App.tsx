@@ -30,6 +30,7 @@ import HostProfile from "./pages/host/HostProfile";
 import HostSettings from "./pages/host/HostSettings";
 import AddProperty from "./pages/host/AddProperty";
 import HostCalendar from "./pages/host/HostCalendar";
+import HostEarnings from "./pages/host/HostEarnings";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -75,6 +76,7 @@ const App = () => (
             <Route path="/host/properties/new" element={<ProtectedRoute requiredRole="host"><AddProperty /></ProtectedRoute>} />
             <Route path="/host/bookings" element={<ProtectedRoute requiredRole="host"><HostBookings /></ProtectedRoute>} />
             <Route path="/host/calendar" element={<ProtectedRoute requiredRole="host"><HostCalendar /></ProtectedRoute>} />
+            <Route path="/host/earnings" element={<ProtectedRoute requiredRole="host"><HostEarnings /></ProtectedRoute>} />
             <Route path="/host/profile" element={<ProtectedRoute requiredRole="host"><HostProfile /></ProtectedRoute>} />
             <Route path="/host/settings" element={<ProtectedRoute requiredRole="host"><HostSettings /></ProtectedRoute>} />
             

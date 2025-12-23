@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Building2, CalendarDays, User, Settings, Plus, CalendarCheck } from "lucide-react";
+import { LayoutDashboard, Building2, CalendarDays, User, Settings, Plus, CalendarCheck, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -7,6 +7,7 @@ const navItems = [
   { icon: Building2, label: "Properties", href: "/host/properties" },
   { icon: CalendarDays, label: "Bookings", href: "/host/bookings" },
   { icon: CalendarCheck, label: "Calendar", href: "/host/calendar" },
+  { icon: DollarSign, label: "Earnings", href: "/host/earnings" },
   { icon: User, label: "Profile", href: "/host/profile" },
   { icon: Settings, label: "Settings", href: "/host/settings" },
 ];
