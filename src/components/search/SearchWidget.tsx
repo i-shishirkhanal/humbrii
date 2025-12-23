@@ -115,7 +115,7 @@ const SearchWidget = ({
       {/* Booking Type Tabs - Mobile Optimized */}
       {showTabs && (
         <div className="flex justify-center mb-3 md:mb-4 px-1">
-          <div className="inline-flex items-center gap-1 p-1 bg-secondary/80 backdrop-blur-sm rounded-full border border-border overflow-x-auto scrollbar-hide max-w-full">
+          <div className="inline-flex items-center gap-0.5 sm:gap-1 p-0.5 sm:p-1 bg-secondary/80 backdrop-blur-sm rounded-full border border-border overflow-x-auto scrollbar-hide max-w-full">
             {bookingTypes.map((type) => {
               const Icon = type.icon;
               const isActive = activeType === type.id;
@@ -124,15 +124,14 @@ const SearchWidget = ({
                   key={type.id}
                   onClick={() => handleTypeClick(type.id)}
                   className={cn(
-                    "flex items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2 md:px-4 rounded-full text-[11px] sm:text-xs md:text-sm font-medium transition-all duration-300 whitespace-nowrap flex-shrink-0",
+                    "flex items-center gap-0.5 sm:gap-1 px-2 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2 rounded-full text-[10px] sm:text-xs md:text-sm font-medium transition-all duration-300 whitespace-nowrap flex-shrink-0",
                     isActive
                       ? "bg-primary text-primary-foreground shadow-lg"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  <span className="hidden xs:inline sm:inline">{type.label}</span>
-                  <span className="xs:hidden sm:hidden">{type.label.split(' ')[0]}</span>
+                  <Icon className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5" />
+                  <span>{type.label}</span>
                 </button>
               );
             })}
