@@ -65,8 +65,8 @@ const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
   const navItems = role === "admin" ? adminNavItems : role === "host" ? hostNavItems : userNavItems;
 
   const roleLabels = {
-    user: "User Dashboard",
-    host: "Host Dashboard",
+    user: "Welcome Back",
+    host: "Host Center",
     admin: "Admin Panel",
   };
 

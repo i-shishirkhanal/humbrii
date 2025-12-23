@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import BottomNav from "@/components/layout/BottomNav";
 import PropertyCard from "@/components/cards/PropertyCard";
 import SearchWidget, { BookingType } from "@/components/search/SearchWidget";
 import {
@@ -426,6 +427,12 @@ const Index = () => {
       </section>
 
       <Footer />
+      
+      {/* Bottom Navigation for Mobile */}
+      <BottomNav />
+      
+      {/* Add padding for bottom nav on mobile */}
+      <div className="h-20 md:hidden" />
     </div>
   );
 };
