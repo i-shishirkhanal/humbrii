@@ -1,5 +1,5 @@
 import { useState } from "react";
-import DashboardLayout from "@/components/layout/DashboardLayout";
+import HostLayout from "@/components/layout/HostLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +40,7 @@ const HostProfile = () => {
   };
 
   return (
-    <DashboardLayout role="host">
+    <HostLayout>
       <div className="max-w-2xl space-y-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Host Profile</h1>
@@ -116,7 +116,7 @@ const HostProfile = () => {
           </form>
         </div>
       </div>
-    </DashboardLayout>
+    </HostLayout>
   );
 };
 

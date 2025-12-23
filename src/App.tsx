@@ -25,6 +25,7 @@ import HostProperties from "./pages/host/HostProperties";
 import HostBookings from "./pages/host/HostBookings";
 import HostProfile from "./pages/host/HostProfile";
 import HostSettings from "./pages/host/HostSettings";
+import AddProperty from "./pages/host/AddProperty";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -54,6 +55,7 @@ const App = () => (
             {/* Host Dashboard Routes */}
             <Route path="/host" element={<ProtectedRoute requiredRole="host"><HostDashboard /></ProtectedRoute>} />
             <Route path="/host/properties" element={<ProtectedRoute requiredRole="host"><HostProperties /></ProtectedRoute>} />
+            <Route path="/host/properties/new" element={<ProtectedRoute requiredRole="host"><AddProperty /></ProtectedRoute>} />
             <Route path="/host/bookings" element={<ProtectedRoute requiredRole="host"><HostBookings /></ProtectedRoute>} />
             <Route path="/host/profile" element={<ProtectedRoute requiredRole="host"><HostProfile /></ProtectedRoute>} />
             <Route path="/host/settings" element={<ProtectedRoute requiredRole="host"><HostSettings /></ProtectedRoute>} />
