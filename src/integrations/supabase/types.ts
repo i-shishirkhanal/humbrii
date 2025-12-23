@@ -99,6 +99,11 @@ export type Database = {
           currency: string | null
           description: string | null
           featured_order: number | null
+          featured_order_daycation: number | null
+          featured_order_full_stay: number | null
+          featured_order_hourly: number | null
+          featured_order_main: number | null
+          featured_order_vibe_chill: number | null
           host_id: string
           hourly_available_slots: string[] | null
           hourly_end_time: string | null
@@ -107,6 +112,11 @@ export type Database = {
           id: string
           images: string[] | null
           is_featured: boolean | null
+          is_featured_daycation: boolean | null
+          is_featured_full_stay: boolean | null
+          is_featured_hourly: boolean | null
+          is_featured_main: boolean | null
+          is_featured_vibe_chill: boolean | null
           is_published: boolean | null
           location: string
           name: string
@@ -122,6 +132,11 @@ export type Database = {
           currency?: string | null
           description?: string | null
           featured_order?: number | null
+          featured_order_daycation?: number | null
+          featured_order_full_stay?: number | null
+          featured_order_hourly?: number | null
+          featured_order_main?: number | null
+          featured_order_vibe_chill?: number | null
           host_id: string
           hourly_available_slots?: string[] | null
           hourly_end_time?: string | null
@@ -130,6 +145,11 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_featured?: boolean | null
+          is_featured_daycation?: boolean | null
+          is_featured_full_stay?: boolean | null
+          is_featured_hourly?: boolean | null
+          is_featured_main?: boolean | null
+          is_featured_vibe_chill?: boolean | null
           is_published?: boolean | null
           location: string
           name: string
@@ -145,6 +165,11 @@ export type Database = {
           currency?: string | null
           description?: string | null
           featured_order?: number | null
+          featured_order_daycation?: number | null
+          featured_order_full_stay?: number | null
+          featured_order_hourly?: number | null
+          featured_order_main?: number | null
+          featured_order_vibe_chill?: number | null
           host_id?: string
           hourly_available_slots?: string[] | null
           hourly_end_time?: string | null
@@ -153,6 +178,11 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_featured?: boolean | null
+          is_featured_daycation?: boolean | null
+          is_featured_full_stay?: boolean | null
+          is_featured_hourly?: boolean | null
+          is_featured_main?: boolean | null
+          is_featured_vibe_chill?: boolean | null
           is_published?: boolean | null
           location?: string
           name?: string
