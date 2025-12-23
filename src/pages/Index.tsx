@@ -57,7 +57,6 @@ interface PropertyData {
   base_price: number;
   category: string;
   currency: string | null;
-  is_featured?: boolean;
 }
 
 interface ScrollableSectionProps {
@@ -154,16 +153,17 @@ const ScrollableSection = ({ title, subtitle, properties, linkTo, bgClass = "", 
 const Index = () => {
   const [activeBookingType, setActiveBookingType] = useState<BookingType>("daycation");
 
-  // Fetch featured properties
+  // Fetch main featured properties (separate from category featured)
   const { data: featuredProperties } = useQuery({
-    queryKey: ["featured-properties"],
+    queryKey: ["featured-properties-main"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("properties")
         .select("*")
         .eq("is_published", true)
         .eq("status", "active")
-        .eq("is_featured", true)
+        .eq("is_featured_main", true)
+        .order("featured_order_main", { ascending: true })
         .limit(10);
       
       if (error) throw error;
@@ -171,7 +171,83 @@ const Index = () => {
     },
   });
 
-  // Fetch properties by category
+  // Fetch featured hourly properties
+  const { data: featuredHourlyProperties } = useQuery({
+    queryKey: ["featured-hourly-properties"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("is_published", true)
+        .eq("status", "active")
+        .eq("is_featured_hourly", true)
+        .eq("category", "hourly")
+        .order("featured_order_hourly", { ascending: true })
+        .limit(10);
+      
+      if (error) throw error;
+      return data as PropertyData[];
+    },
+  });
+
+  // Fetch featured daycation properties
+  const { data: featuredDaycationProperties } = useQuery({
+    queryKey: ["featured-daycation-properties"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("is_published", true)
+        .eq("status", "active")
+        .eq("is_featured_daycation", true)
+        .eq("category", "daycation")
+        .order("featured_order_daycation", { ascending: true })
+        .limit(10);
+      
+      if (error) throw error;
+      return data as PropertyData[];
+    },
+  });
+
+  // Fetch featured full stay properties
+  const { data: featuredFullStayProperties } = useQuery({
+    queryKey: ["featured-fullstay-properties"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("is_published", true)
+        .eq("status", "active")
+        .eq("is_featured_full_stay", true)
+        .eq("category", "full_stay")
+        .order("featured_order_full_stay", { ascending: true })
+        .limit(10);
+      
+      if (error) throw error;
+      return data as PropertyData[];
+    },
+  });
+
+  // Fetch featured vibe & chill properties
+  const { data: featuredVibeProperties } = useQuery({
+    queryKey: ["featured-vibe-properties"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("is_published", true)
+        .eq("status", "active")
+        .eq("is_featured_vibe_chill", true)
+        .eq("category", "vibe_chill")
+        .order("featured_order_vibe_chill", { ascending: true })
+        .limit(10);
+      
+      if (error) throw error;
+      return data as PropertyData[];
+    },
+  });
+
+  // Fallback: Fetch regular properties by category (non-featured, for when no featured exist)
   const { data: hourlyProperties } = useQuery({
     queryKey: ["hourly-properties"],
     queryFn: async () => {
@@ -235,6 +311,12 @@ const Index = () => {
       return data as PropertyData[];
     },
   });
+
+  // Use featured properties if available, otherwise fall back to regular category properties
+  const displayHourly = (featuredHourlyProperties?.length || 0) > 0 ? featuredHourlyProperties : hourlyProperties;
+  const displayDaycation = (featuredDaycationProperties?.length || 0) > 0 ? featuredDaycationProperties : daycationProperties;
+  const displayFullStay = (featuredFullStayProperties?.length || 0) > 0 ? featuredFullStayProperties : fullStayProperties;
+  const displayVibe = (featuredVibeProperties?.length || 0) > 0 ? featuredVibeProperties : vibeProperties;
 
   return (
     <div className="min-h-screen bg-background">
@@ -311,7 +393,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Featured Properties Section */}
+      {/* Featured Properties Section (Main) */}
       {featuredProperties && featuredProperties.length > 0 && (
         <ScrollableSection
           title="Featured Properties"
@@ -323,35 +405,42 @@ const Index = () => {
         />
       )}
 
-      {/* Category Sections with Horizontal Scroll */}
+      {/* Featured Hourly Stays */}
       <ScrollableSection
-        title="Hourly Stays"
+        title="Featured Hourly Stays"
         subtitle="Quick stays by the hour"
-        properties={hourlyProperties || []}
+        properties={displayHourly || []}
         linkTo="/properties?type=hourly"
+        featured={(featuredHourlyProperties?.length || 0) > 0}
       />
 
+      {/* Featured Daycation */}
       <ScrollableSection
-        title="Daycation"
+        title="Featured Daycation"
         subtitle="Perfect day escapes"
-        properties={daycationProperties || []}
+        properties={displayDaycation || []}
         linkTo="/properties?type=daycation"
         bgClass="bg-muted/30"
+        featured={(featuredDaycationProperties?.length || 0) > 0}
       />
 
+      {/* Featured Full Stay */}
       <ScrollableSection
-        title="Full Stay"
+        title="Featured Full Stay"
         subtitle="Extended comfort stays"
-        properties={fullStayProperties || []}
+        properties={displayFullStay || []}
         linkTo="/properties?type=fullstay"
+        featured={(featuredFullStayProperties?.length || 0) > 0}
       />
 
+      {/* Featured Vibe & Chill */}
       <ScrollableSection
-        title="Vibe & Chill"
+        title="Featured Vibe & Chill"
         subtitle="Relax and unwind spots"
-        properties={vibeProperties || []}
+        properties={displayVibe || []}
         linkTo="/properties?type=vibe"
         bgClass="bg-muted/30"
+        featured={(featuredVibeProperties?.length || 0) > 0}
       />
 
       {/* Become a Host CTA */}
