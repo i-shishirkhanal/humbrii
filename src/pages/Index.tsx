@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/Navbar";
@@ -6,6 +6,8 @@ import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import PropertyCard from "@/components/cards/PropertyCard";
 import SearchWidget, { BookingType } from "@/components/search/SearchWidget";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowRight,
   Building2,
@@ -16,212 +18,8 @@ import {
   HeartPulse,
   Home,
   Laptop,
+  Star,
 } from "lucide-react";
-import { useRef } from "react";
-
-const hourlyProperties = [
-  {
-    id: "h1",
-    name: "Thamel Urban Retreat",
-    location: "Kathmandu, Nepal",
-    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80",
-    rating: 4.8,
-    pricePerNight: 1500,
-    maxGuests: 2,
-    bedrooms: 1,
-    propertyType: "Hourly",
-    bookingType: "hourly",
-  },
-  {
-    id: "h2",
-    name: "Lakeside Quick Stay",
-    location: "Pokhara, Nepal",
-    image: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&q=80",
-    rating: 4.6,
-    pricePerNight: 1200,
-    maxGuests: 2,
-    bedrooms: 1,
-    propertyType: "Hourly",
-    bookingType: "hourly",
-  },
-  {
-    id: "h3",
-    name: "City Center Express",
-    location: "Kathmandu, Nepal",
-    image: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800&q=80",
-    rating: 4.5,
-    pricePerNight: 1000,
-    maxGuests: 2,
-    bedrooms: 1,
-    propertyType: "Hourly",
-    bookingType: "hourly",
-  },
-  {
-    id: "h4",
-    name: "Bhaktapur Heritage Stay",
-    location: "Bhaktapur, Nepal",
-    image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800&q=80",
-    rating: 4.7,
-    pricePerNight: 1100,
-    maxGuests: 2,
-    bedrooms: 1,
-    propertyType: "Hourly",
-    bookingType: "hourly",
-  },
-];
-
-const daycationProperties = [
-  {
-    id: "d1",
-    name: "Mountain Day Escape",
-    location: "Nagarkot, Nepal",
-    image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80",
-    rating: 4.9,
-    pricePerNight: 3500,
-    maxGuests: 4,
-    bedrooms: 2,
-    propertyType: "Daycation",
-    bookingType: "daycation",
-  },
-  {
-    id: "d2",
-    name: "Poolside Paradise",
-    location: "Pokhara, Nepal",
-    image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800&q=80",
-    rating: 4.7,
-    pricePerNight: 4200,
-    maxGuests: 6,
-    bedrooms: 2,
-    propertyType: "Daycation",
-    bookingType: "daycation",
-  },
-  {
-    id: "d3",
-    name: "Sunrise Valley Resort",
-    location: "Dhulikhel, Nepal",
-    image: "https://images.unsplash.com/photo-1596178065887-1198b6148b2b?w=800&q=80",
-    rating: 4.8,
-    pricePerNight: 3800,
-    maxGuests: 4,
-    bedrooms: 2,
-    propertyType: "Daycation",
-    bookingType: "daycation",
-  },
-  {
-    id: "d4",
-    name: "Himalayan Spa Day",
-    location: "Pokhara, Nepal",
-    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80",
-    rating: 4.9,
-    pricePerNight: 4500,
-    maxGuests: 4,
-    bedrooms: 2,
-    propertyType: "Daycation",
-    bookingType: "daycation",
-  },
-];
-
-const fullStayProperties = [
-  {
-    id: "f1",
-    name: "Himalayan View Resort",
-    location: "Pokhara, Nepal",
-    image: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800&q=80",
-    rating: 4.9,
-    pricePerNight: 8500,
-    maxGuests: 4,
-    bedrooms: 2,
-    propertyType: "Full Stay",
-    bookingType: "fullstay",
-  },
-  {
-    id: "f2",
-    name: "Heritage Boutique Hotel",
-    location: "Bhaktapur, Nepal",
-    image: "https://images.unsplash.com/photo-1596178065887-1198b6148b2b?w=800&q=80",
-    rating: 4.8,
-    pricePerNight: 6200,
-    maxGuests: 2,
-    bedrooms: 1,
-    propertyType: "Full Stay",
-    bookingType: "fullstay",
-  },
-  {
-    id: "f3",
-    name: "Lakeside Paradise Villa",
-    location: "Pokhara, Nepal",
-    image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80",
-    rating: 4.7,
-    pricePerNight: 12000,
-    maxGuests: 6,
-    bedrooms: 3,
-    propertyType: "Full Stay",
-    bookingType: "fullstay",
-  },
-  {
-    id: "f4",
-    name: "Nagarkot Mountain Lodge",
-    location: "Nagarkot, Nepal",
-    image: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&q=80",
-    rating: 4.6,
-    pricePerNight: 7500,
-    maxGuests: 4,
-    bedrooms: 2,
-    propertyType: "Full Stay",
-    bookingType: "fullstay",
-  },
-];
-
-const vibeProperties = [
-  {
-    id: "v1",
-    name: "Rooftop Lounge & Chill",
-    location: "Kathmandu, Nepal",
-    image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80",
-    rating: 4.8,
-    pricePerNight: 2500,
-    maxGuests: 8,
-    bedrooms: 1,
-    propertyType: "Vibe & Chill",
-    bookingType: "vibe",
-  },
-  {
-    id: "v2",
-    name: "Lakeside Sunset Spot",
-    location: "Pokhara, Nepal",
-    image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80",
-    rating: 4.9,
-    pricePerNight: 3000,
-    maxGuests: 6,
-    bedrooms: 1,
-    propertyType: "Vibe & Chill",
-    bookingType: "vibe",
-  },
-  {
-    id: "v3",
-    name: "Garden Terrace Cafe",
-    location: "Patan, Nepal",
-    image: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800&q=80",
-    rating: 4.6,
-    pricePerNight: 2000,
-    maxGuests: 10,
-    bedrooms: 1,
-    propertyType: "Vibe & Chill",
-    bookingType: "vibe",
-  },
-  {
-    id: "v4",
-    name: "Mountain View Terrace",
-    location: "Nagarkot, Nepal",
-    image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800&q=80",
-    rating: 4.7,
-    pricePerNight: 2800,
-    maxGuests: 8,
-    bedrooms: 1,
-    propertyType: "Vibe & Chill",
-    bookingType: "vibe",
-  },
-];
 
 const whoWeServe = [
   {
@@ -251,15 +49,27 @@ const whoWeServe = [
   },
 ];
 
+interface PropertyData {
+  id: string;
+  name: string;
+  location: string;
+  images: string[] | null;
+  base_price: number;
+  category: string;
+  currency: string | null;
+  is_featured?: boolean;
+}
+
 interface ScrollableSectionProps {
   title: string;
   subtitle: string;
-  properties: typeof hourlyProperties;
+  properties: PropertyData[];
   linkTo: string;
   bgClass?: string;
+  featured?: boolean;
 }
 
-const ScrollableSection = ({ title, subtitle, properties, linkTo, bgClass = "" }: ScrollableSectionProps) => {
+const ScrollableSection = ({ title, subtitle, properties, linkTo, bgClass = "", featured = false }: ScrollableSectionProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {
@@ -272,13 +82,28 @@ const ScrollableSection = ({ title, subtitle, properties, linkTo, bgClass = "" }
     }
   };
 
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      hourly: "Hourly",
+      daycation: "Daycation",
+      full_stay: "Full Stay",
+      vibe_chill: "Vibe & Chill",
+    };
+    return labels[category] || category;
+  };
+
+  if (properties.length === 0) return null;
+
   return (
     <section className={`py-6 md:py-10 ${bgClass}`}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg md:text-xl font-bold text-foreground">{title}</h2>
-            <p className="text-muted-foreground text-xs md:text-sm mt-0.5">{subtitle}</p>
+          <div className="flex items-center gap-2">
+            {featured && <Star className="w-5 h-5 text-primary fill-primary" />}
+            <div>
+              <h2 className="text-lg md:text-xl font-bold text-foreground">{title}</h2>
+              <p className="text-muted-foreground text-xs md:text-sm mt-0.5">{subtitle}</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -306,7 +131,19 @@ const ScrollableSection = ({ title, subtitle, properties, linkTo, bgClass = "" }
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {properties.map((property) => (
-            <PropertyCard key={property.id} {...property} compact />
+            <PropertyCard 
+              key={property.id} 
+              id={property.id}
+              name={property.name}
+              location={property.location}
+              image={property.images?.[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80"}
+              pricePerNight={property.base_price}
+              propertyType={getCategoryLabel(property.category)}
+              rating={4.5}
+              maxGuests={4}
+              bedrooms={2}
+              compact 
+            />
           ))}
         </div>
       </div>
@@ -316,6 +153,88 @@ const ScrollableSection = ({ title, subtitle, properties, linkTo, bgClass = "" }
 
 const Index = () => {
   const [activeBookingType, setActiveBookingType] = useState<BookingType>("daycation");
+
+  // Fetch featured properties
+  const { data: featuredProperties } = useQuery({
+    queryKey: ["featured-properties"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("is_published", true)
+        .eq("status", "active")
+        .eq("is_featured", true)
+        .limit(10);
+      
+      if (error) throw error;
+      return data as PropertyData[];
+    },
+  });
+
+  // Fetch properties by category
+  const { data: hourlyProperties } = useQuery({
+    queryKey: ["hourly-properties"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("is_published", true)
+        .eq("status", "active")
+        .eq("category", "hourly")
+        .limit(8);
+      
+      if (error) throw error;
+      return data as PropertyData[];
+    },
+  });
+
+  const { data: daycationProperties } = useQuery({
+    queryKey: ["daycation-properties"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("is_published", true)
+        .eq("status", "active")
+        .eq("category", "daycation")
+        .limit(8);
+      
+      if (error) throw error;
+      return data as PropertyData[];
+    },
+  });
+
+  const { data: fullStayProperties } = useQuery({
+    queryKey: ["fullstay-properties"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("is_published", true)
+        .eq("status", "active")
+        .eq("category", "full_stay")
+        .limit(8);
+      
+      if (error) throw error;
+      return data as PropertyData[];
+    },
+  });
+
+  const { data: vibeProperties } = useQuery({
+    queryKey: ["vibe-properties"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("is_published", true)
+        .eq("status", "active")
+        .eq("category", "vibe_chill")
+        .limit(8);
+      
+      if (error) throw error;
+      return data as PropertyData[];
+    },
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -392,33 +311,45 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Featured Sections with Horizontal Scroll */}
+      {/* Featured Properties Section */}
+      {featuredProperties && featuredProperties.length > 0 && (
+        <ScrollableSection
+          title="Featured Properties"
+          subtitle="Handpicked by our team"
+          properties={featuredProperties}
+          linkTo="/properties"
+          bgClass="bg-primary/5"
+          featured={true}
+        />
+      )}
+
+      {/* Category Sections with Horizontal Scroll */}
       <ScrollableSection
-        title="Featured Hourly"
+        title="Hourly Stays"
         subtitle="Quick stays by the hour"
-        properties={hourlyProperties}
+        properties={hourlyProperties || []}
         linkTo="/properties?type=hourly"
       />
 
       <ScrollableSection
-        title="Featured Daycation"
+        title="Daycation"
         subtitle="Perfect day escapes"
-        properties={daycationProperties}
+        properties={daycationProperties || []}
         linkTo="/properties?type=daycation"
         bgClass="bg-muted/30"
       />
 
       <ScrollableSection
-        title="Featured Full Stay"
+        title="Full Stay"
         subtitle="Extended comfort stays"
-        properties={fullStayProperties}
+        properties={fullStayProperties || []}
         linkTo="/properties?type=fullstay"
       />
 
       <ScrollableSection
-        title="Featured Vibe & Chill"
+        title="Vibe & Chill"
         subtitle="Relax and unwind spots"
-        properties={vibeProperties}
+        properties={vibeProperties || []}
         linkTo="/properties?type=vibe"
         bgClass="bg-muted/30"
       />

@@ -1,6 +1,6 @@
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import StatCard from "@/components/cards/StatCard";
-import { Users, Building2, Calendar, DollarSign, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { Users, Building2, Calendar, Star, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -43,9 +43,10 @@ const AdminDashboard = () => {
 
   // Pending properties (draft status)
   const pendingProperties = properties?.filter(p => p.status === "draft") || [];
+  const featuredCount = properties?.filter((p: any) => p.is_featured).length || 0;
 
   const updatePropertyMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: Record<string, unknown> }) => {
       const { error } = await supabase.from("properties").update(updates).eq("id", id);
       if (error) throw error;
     },
@@ -64,6 +65,10 @@ const AdminDashboard = () => {
 
   const handleReject = (id: string) => {
     updatePropertyMutation.mutate({ id, updates: { status: "suspended" } });
+  };
+
+  const handleToggleFeatured = (id: string, currentFeatured: boolean) => {
+    updatePropertyMutation.mutate({ id, updates: { is_featured: !currentFeatured } });
   };
 
   return (

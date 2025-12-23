@@ -5,19 +5,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Building2, MapPin, DollarSign, MoreVertical, CheckCircle, XCircle, Eye, EyeOff } from "lucide-react";
+import { Search, Building2, MapPin, DollarSign, MoreVertical, CheckCircle, XCircle, Eye, EyeOff, Star, StarOff, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 const AdminProperties = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "draft" | "suspended">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "draft" | "suspended" | "featured">("all");
+  const [deletePropertyId, setDeletePropertyId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: properties, isLoading } = useQuery({
@@ -34,7 +46,7 @@ const AdminProperties = () => {
   });
 
   const updatePropertyMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: Record<string, unknown> }) => {
       const { error } = await supabase
         .from("properties")
         .update(updates)
@@ -51,6 +63,25 @@ const AdminProperties = () => {
     },
   });
 
+  const deletePropertyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("properties")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-properties"] });
+      toast.success("Property deleted successfully");
+      setDeletePropertyId(null);
+    },
+    onError: () => {
+      toast.error("Failed to delete property");
+    },
+  });
+
   const handleApprove = (id: string) => {
     updatePropertyMutation.mutate({ id, updates: { status: "active", is_published: true } });
   };
@@ -63,9 +94,25 @@ const AdminProperties = () => {
     updatePropertyMutation.mutate({ id, updates: { is_published: !currentStatus } });
   };
 
+  const handleToggleFeatured = (id: string, currentFeatured: boolean) => {
+    updatePropertyMutation.mutate({ 
+      id, 
+      updates: { is_featured: !currentFeatured } 
+    });
+    toast.success(currentFeatured ? "Removed from featured" : "Added to featured");
+  };
+
+  const handleDelete = (id: string) => {
+    deletePropertyMutation.mutate(id);
+  };
+
   const filteredProperties = properties?.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.location.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (statusFilter === "featured") {
+      return matchesSearch && (p as any).is_featured === true;
+    }
     const matchesStatus = statusFilter === "all" || p.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -80,16 +127,18 @@ const AdminProperties = () => {
     return colors[category] || "bg-muted text-muted-foreground";
   };
 
+  const featuredCount = properties?.filter((p: any) => p.is_featured).length || 0;
+
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Property Management</h1>
-          <p className="text-muted-foreground mt-1">Review and manage all properties</p>
+          <p className="text-muted-foreground mt-1">Review, approve, and manage all properties</p>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           <div className="bg-card rounded-xl border border-border p-4">
             <p className="text-2xl font-bold text-foreground">{properties?.length || 0}</p>
             <p className="text-sm text-muted-foreground">Total</p>
@@ -100,11 +149,15 @@ const AdminProperties = () => {
           </div>
           <div className="bg-card rounded-xl border border-border p-4">
             <p className="text-2xl font-bold text-warning">{properties?.filter(p => p.status === "draft").length || 0}</p>
-            <p className="text-sm text-muted-foreground">Draft</p>
+            <p className="text-sm text-muted-foreground">Pending</p>
           </div>
           <div className="bg-card rounded-xl border border-border p-4">
             <p className="text-2xl font-bold text-destructive">{properties?.filter(p => p.status === "suspended").length || 0}</p>
             <p className="text-sm text-muted-foreground">Suspended</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-4">
+            <p className="text-2xl font-bold text-primary">{featuredCount}</p>
+            <p className="text-sm text-muted-foreground">Featured</p>
           </div>
         </div>
 
@@ -119,14 +172,16 @@ const AdminProperties = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="flex gap-2">
-            {(["all", "active", "draft", "suspended"] as const).map((status) => (
+          <div className="flex gap-2 flex-wrap">
+            {(["all", "active", "draft", "suspended", "featured"] as const).map((status) => (
               <Button
                 key={status}
                 variant={statusFilter === status ? "default" : "outline"}
                 size="sm"
                 onClick={() => setStatusFilter(status)}
+                className={status === "featured" ? "gap-1" : ""}
               >
+                {status === "featured" && <Star className="w-3 h-3" />}
                 {status.charAt(0).toUpperCase() + status.slice(1)}
               </Button>
             ))}
@@ -161,11 +216,11 @@ const AdminProperties = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredProperties?.map((property) => (
+                  filteredProperties?.map((property: any) => (
                     <tr key={property.id} className="border-b border-border last:border-0 hover:bg-muted/30">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden flex-shrink-0">
+                          <div className="relative w-12 h-12 rounded-lg bg-muted overflow-hidden flex-shrink-0">
                             {property.images?.[0] ? (
                               <img src={property.images[0]} alt="" className="w-full h-full object-cover" />
                             ) : (
@@ -173,9 +228,16 @@ const AdminProperties = () => {
                                 <Building2 className="w-5 h-5 text-muted-foreground" />
                               </div>
                             )}
+                            {property.is_featured && (
+                              <div className="absolute top-0 right-0 bg-primary p-0.5 rounded-bl">
+                                <Star className="w-3 h-3 text-primary-foreground fill-primary-foreground" />
+                              </div>
+                            )}
                           </div>
                           <div>
-                            <p className="font-medium text-foreground">{property.name}</p>
+                            <p className="font-medium text-foreground flex items-center gap-1">
+                              {property.name}
+                            </p>
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <MapPin className="w-3 h-3" />
                               {property.location}
@@ -195,15 +257,20 @@ const AdminProperties = () => {
                         </div>
                       </td>
                       <td className="p-4">
-                        <Badge variant={
-                          property.status === "active" ? "default" :
-                          property.status === "suspended" ? "destructive" : "secondary"
-                        }>
-                          {property.status}
-                        </Badge>
-                        {property.is_published && (
-                          <Badge variant="outline" className="ml-1">Published</Badge>
-                        )}
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant={
+                            property.status === "active" ? "default" :
+                            property.status === "suspended" ? "destructive" : "secondary"
+                          }>
+                            {property.status}
+                          </Badge>
+                          {property.is_published && (
+                            <Badge variant="outline">Published</Badge>
+                          )}
+                          {property.is_featured && (
+                            <Badge className="bg-primary/10 text-primary border-primary/20">Featured</Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4 text-sm text-muted-foreground">
                         {format(new Date(property.created_at), "MMM d, yyyy")}
@@ -215,7 +282,7 @@ const AdminProperties = () => {
                               <MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="w-48">
                             {property.status !== "active" && (
                               <DropdownMenuItem onClick={() => handleApprove(property.id)}>
                                 <CheckCircle className="w-4 h-4 mr-2 text-success" />
@@ -235,15 +302,36 @@ const AdminProperties = () => {
                                 </>
                               )}
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleToggleFeatured(property.id, property.is_featured || false)}>
+                              {property.is_featured ? (
+                                <>
+                                  <StarOff className="w-4 h-4 mr-2" />
+                                  Remove from Featured
+                                </>
+                              ) : (
+                                <>
+                                  <Star className="w-4 h-4 mr-2 text-primary" />
+                                  Add to Featured
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             {property.status !== "suspended" && (
                               <DropdownMenuItem 
                                 onClick={() => handleSuspend(property.id)}
-                                className="text-destructive"
+                                className="text-warning"
                               >
                                 <XCircle className="w-4 h-4 mr-2" />
                                 Suspend
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem 
+                              onClick={() => setDeletePropertyId(property.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete Property
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
@@ -255,6 +343,27 @@ const AdminProperties = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletePropertyId} onOpenChange={() => setDeletePropertyId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Property</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this property? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => deletePropertyId && handleDelete(deletePropertyId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
