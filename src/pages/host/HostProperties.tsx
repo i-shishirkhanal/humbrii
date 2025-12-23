@@ -51,10 +51,11 @@ const HostProperties = () => {
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">My Properties</h1>
             <p className="text-muted-foreground mt-1">Manage your listed properties</p>
           </div>
-          <Link to="/host/properties/new" className="md:hidden">
+          <Link to="/host/properties/new">
             <Button>
               <Plus className="w-4 h-4 mr-2" />
-              Add
+              <span className="hidden sm:inline">Add Property</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </Link>
         </div>

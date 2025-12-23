@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import HostLayout from "@/components/layout/HostLayout";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,9 @@ import {
   Building2,
   MapPin,
   DollarSign,
-  Image as ImageIcon
+  Image as ImageIcon,
+  X,
+  Upload
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -69,7 +71,9 @@ const AddProperty = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [step, setStep] = useState(1);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -83,6 +87,59 @@ const AddProperty = () => {
     // Hourly specific
     hourly_available_slots: ["3", "6", "9"],
   });
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !user) return;
+
+    const remainingSlots = 5 - formData.images.length;
+    if (remainingSlots <= 0) {
+      toast.error("Maximum 5 images allowed");
+      return;
+    }
+
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
+    setIsUploading(true);
+
+    try {
+      const uploadedUrls: string[] = [];
+
+      for (const file of filesToUpload) {
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("property-images")
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+          .from("property-images")
+          .getPublicUrl(fileName);
+
+        uploadedUrls.push(publicUrlData.publicUrl);
+      }
+
+      setFormData({ ...formData, images: [...formData.images, ...uploadedUrls] });
+      toast.success(`${uploadedUrls.length} image(s) uploaded`);
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload images");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setFormData({
+      ...formData,
+      images: formData.images.filter((_, i) => i !== index),
+    });
+  };
 
   const handleCategorySelect = (category: PropertyCategory) => {
     setFormData({ ...formData, category });
@@ -255,6 +312,72 @@ const AddProperty = () => {
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 />
               </div>
+            </div>
+
+            {/* Images */}
+            <div className="bg-card rounded-xl border border-border p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <ImageIcon className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-semibold text-card-foreground">Property Images</h2>
+                <span className="text-xs text-muted-foreground ml-auto">
+                  {formData.images.length}/5 images
+                </span>
+              </div>
+
+              {/* Image Preview Grid */}
+              {formData.images.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {formData.images.map((url, index) => (
+                    <div key={index} className="relative aspect-video rounded-lg overflow-hidden bg-muted">
+                      <img
+                        src={url}
+                        alt={`Property ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-2 right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload Button */}
+              {formData.images.length < 5 && (
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-24 border-dashed"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5 mr-2" />
+                        Click to upload images (max 5)
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Pricing */}
