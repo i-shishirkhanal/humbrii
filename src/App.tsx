@@ -13,7 +13,7 @@ import PropertyDetail from "./pages/PropertyDetail";
 import NotFound from "./pages/NotFound";
 
 // User pages
-import UserDashboard from "./pages/user/UserDashboard";
+import UserActivities from "./pages/user/UserActivities";
 import UserBookings from "./pages/user/UserBookings";
 import UserProfile from "./pages/user/UserProfile";
 import UserSettings from "./pages/user/UserSettings";
@@ -44,8 +44,8 @@ const App = () => (
             <Route path="/properties" element={<Properties />} />
             <Route path="/property/:id" element={<PropertyDetail />} />
             
-            {/* User Dashboard Routes */}
-            <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
+{/* User Dashboard Routes */}
+            <Route path="/dashboard" element={<ProtectedRoute><UserActivities /></ProtectedRoute>} />
             <Route path="/dashboard/bookings" element={<ProtectedRoute><UserBookings /></ProtectedRoute>} />
             <Route path="/dashboard/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
             <Route path="/dashboard/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
