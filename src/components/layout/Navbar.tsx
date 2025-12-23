@@ -1,7 +1,8 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { User, CalendarCheck, Settings, Activity, LogOut, ArrowRightLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,15 +12,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const navLinks = [
-  { name: "Hourly", path: "/properties?type=hourly" },
-  { name: "Daycation", path: "/properties?type=daycation" },
-  { name: "Full Stay", path: "/properties?type=fullstay" },
-  { name: "Vibe & Chill", path: "/properties?type=vibe" },
+  { name: "Hourly", path: "/properties?type=hourly", type: "hourly" },
+  { name: "Daycation", path: "/properties?type=daycation", type: "daycation" },
+  { name: "Full Stay", path: "/properties?type=fullstay", type: "fullstay" },
+  { name: "Vibe & Chill", path: "/properties?type=vibe", type: "vibe" },
 ];
 
 const Navbar = () => {
   const { user, signOut, roles, requestHostRole } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const isHost = roles.includes("host");
 
   const handleSignOut = async () => {
@@ -42,6 +44,11 @@ const Navbar = () => {
     }
   };
 
+  const isActive = (type: string) => {
+    const searchParams = new URLSearchParams(location.search);
+    return location.pathname === "/properties" && searchParams.get("type") === type;
+  };
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
       <div className="container mx-auto px-4">
@@ -60,9 +67,17 @@ const Navbar = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className={cn(
+                  "text-sm font-medium transition-colors relative py-1",
+                  isActive(link.type) 
+                    ? "text-primary" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
               >
                 {link.name}
+                {isActive(link.type) && (
+                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                )}
               </Link>
             ))}
           </div>
