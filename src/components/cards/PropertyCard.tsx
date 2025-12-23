@@ -54,6 +54,9 @@ const PropertyCard = ({
     
     localStorage.setItem("favorites", JSON.stringify(favorites));
     setIsFavorite(!isFavorite);
+    
+    // Dispatch custom event to notify favorites page
+    window.dispatchEvent(new Event("favoritesUpdated"));
   };
 
   return (
