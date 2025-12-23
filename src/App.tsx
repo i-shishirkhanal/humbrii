@@ -29,6 +29,10 @@ import AddProperty from "./pages/host/AddProperty";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminHosts from "./pages/admin/AdminHosts";
+import AdminProperties from "./pages/admin/AdminProperties";
+import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +66,10 @@ const App = () => (
             
             {/* Admin Dashboard Routes */}
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><AdminUsers /></ProtectedRoute>} />
+            <Route path="/admin/hosts" element={<ProtectedRoute requiredRole="admin"><AdminHosts /></ProtectedRoute>} />
+            <Route path="/admin/properties" element={<ProtectedRoute requiredRole="admin"><AdminProperties /></ProtectedRoute>} />
+            <Route path="/admin/settings" element={<ProtectedRoute requiredRole="admin"><AdminSettings /></ProtectedRoute>} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
