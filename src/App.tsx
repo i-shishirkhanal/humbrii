@@ -12,6 +12,8 @@ import Properties from "./pages/Properties";
 import PropertyDetail from "./pages/PropertyDetail";
 import MapView from "./pages/MapView";
 import NotFound from "./pages/NotFound";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFailure from "./pages/PaymentFailure";
 
 // User pages
 import UserActivities from "./pages/user/UserActivities";
@@ -56,6 +58,8 @@ const App = () => (
             <Route path="/properties" element={<Properties />} />
             <Route path="/property/:id" element={<PropertyDetail />} />
             <Route path="/map" element={<MapView />} />
+            <Route path="/payment/success" element={<PaymentSuccess />} />
+            <Route path="/payment/failure" element={<PaymentFailure />} />
             
 {/* User Dashboard Routes */}
             <Route path="/dashboard" element={<ProtectedRoute><UserActivities /></ProtectedRoute>} />
