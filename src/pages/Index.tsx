@@ -14,6 +14,11 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  Plane,
+  Briefcase,
+  HeartPulse,
+  Home,
+  Laptop,
 } from "lucide-react";
 import { useRef } from "react";
 
@@ -239,6 +244,39 @@ const features = [
   },
 ];
 
+const whoWeServe = [
+  {
+    icon: Plane,
+    title: "Transit Travelers",
+    description: "Early arrival or late departure",
+    color: "bg-sky-500/10 text-sky-400",
+  },
+  {
+    icon: Briefcase,
+    title: "Business & Meetings",
+    description: "Rest or work between meetings",
+    color: "bg-amber-500/10 text-amber-400",
+  },
+  {
+    icon: HeartPulse,
+    title: "Medical Visits",
+    description: "Comfort near hospitals",
+    color: "bg-rose-500/10 text-rose-400",
+  },
+  {
+    icon: Home,
+    title: "Domestic Travelers",
+    description: "Flexible plans, short breaks",
+    color: "bg-orange-500/10 text-orange-400",
+  },
+  {
+    icon: Laptop,
+    title: "Remote Work",
+    description: "Quiet space, fast Wi-Fi",
+    color: "bg-emerald-500/10 text-emerald-400",
+  },
+];
+
 interface ScrollableSectionProps {
   title: string;
   subtitle: string;
@@ -371,6 +409,30 @@ const Index = () => {
                 </div>
                 <h3 className="text-base md:text-lg font-semibold text-card-foreground mb-1">{feature.title}</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Who We Serve Section */}
+      <section className="py-8 md:py-12 bg-gradient-dark">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-6">
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-2">Who We Serve</h2>
+            <p className="text-white/60 text-sm">Perfect stays for every need</p>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide scroll-smooth md:justify-center" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+            {whoWeServe.map((item, index) => (
+              <div
+                key={item.title}
+                className="flex-shrink-0 w-36 md:w-40 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-center"
+              >
+                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl ${item.color} flex items-center justify-center mx-auto mb-3`}>
+                  <item.icon className="w-5 h-5 md:w-6 md:h-6" />
+                </div>
+                <h3 className="text-white font-semibold text-xs md:text-sm mb-1">{item.title}</h3>
+                <p className="text-white/50 text-[10px] md:text-xs leading-tight">{item.description}</p>
               </div>
             ))}
           </div>
