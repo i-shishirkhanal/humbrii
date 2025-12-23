@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Properties from "./pages/Properties";
 import PropertyDetail from "./pages/PropertyDetail";
+import MapView from "./pages/MapView";
 import NotFound from "./pages/NotFound";
 
 // User pages
@@ -54,6 +55,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/properties" element={<Properties />} />
             <Route path="/property/:id" element={<PropertyDetail />} />
+            <Route path="/map" element={<MapView />} />
             
 {/* User Dashboard Routes */}
             <Route path="/dashboard" element={<ProtectedRoute><UserActivities /></ProtectedRoute>} />
