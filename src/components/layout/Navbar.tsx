@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { User, CalendarCheck, Settings, Activity, LogOut, ArrowRightLeft } from "lucide-react";
+import { User, CalendarCheck, Settings, Activity, LogOut, ArrowRightLeft, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -23,7 +23,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isHost = roles.includes("host");
-
+  const isAdmin = roles.includes("admin");
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
@@ -117,6 +117,14 @@ const Navbar = () => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="flex items-center gap-3 cursor-pointer py-2.5 text-primary">
+                        <Shield className="w-4 h-4" />
+                        <span>Admin Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem 
                     onClick={handleSwitchToHost}
                     className="flex items-center gap-3 cursor-pointer py-2.5 text-accent"
