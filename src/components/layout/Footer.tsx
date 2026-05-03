@@ -6,63 +6,40 @@ const Footer = () => {
 
   return (
     <footer className="bg-secondary text-secondary-foreground">
-      <div className="container mx-auto px-4 py-8 md:py-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+      <div className="container mx-auto px-4 py-6 md:py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
           {/* Brand */}
-          <div className="col-span-2 md:col-span-1 space-y-3">
+          <div className="space-y-3">
             <Link to="/" className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
                 <span className="text-lg font-bold text-primary-foreground">H</span>
               </div>
               <span className="text-lg font-bold">Humbri</span>
             </Link>
-            <p className="text-secondary-foreground/70 text-xs leading-relaxed">
+            <p className="text-secondary-foreground/70 text-xs leading-relaxed max-w-xs">
               Nepal's trusted platform for booking hotels, resorts, and unique stays.
             </p>
-            <div className="flex items-center gap-2">
-              <a href="#" className="p-1.5 rounded-lg bg-sidebar-accent hover:bg-primary transition-colors">
-                <Facebook className="w-3.5 h-3.5" />
-              </a>
-              <a href="#" className="p-1.5 rounded-lg bg-sidebar-accent hover:bg-primary transition-colors">
-                <Instagram className="w-3.5 h-3.5" />
-              </a>
-              <a href="#" className="p-1.5 rounded-lg bg-sidebar-accent hover:bg-primary transition-colors">
-                <Twitter className="w-3.5 h-3.5" />
-              </a>
-            </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Legal */}
           <div className="space-y-3">
-            <h4 className="font-semibold text-sm">Quick Links</h4>
+            <h4 className="font-semibold text-sm">Legal</h4>
             <ul className="space-y-1.5">
-              {["Hourly", "Daycation", "Full Stay", "Vibe & Chill"].map((item) => (
-                <li key={item}>
-                  <Link 
-                    to={`/properties?type=${item.toLowerCase().replace(" & ", "").replace(" ", "")}`}
-                    className="text-xs text-secondary-foreground/70 hover:text-primary transition-colors"
-                  >
-                    {item}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* For Hosts */}
-          <div className="space-y-3">
-            <h4 className="font-semibold text-sm">For Hosts</h4>
-            <ul className="space-y-1.5">
-              {["Become a Host", "Host Dashboard"].map((item) => (
-                <li key={item}>
-                  <Link 
-                    to={`/${item.toLowerCase().replace(" ", "-")}`}
-                    className="text-xs text-secondary-foreground/70 hover:text-primary transition-colors"
-                  >
-                    {item}
-                  </Link>
-                </li>
-              ))}
+              <li>
+                <Link to="/privacy-policy" className="text-xs text-secondary-foreground/70 hover:text-primary transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms-of-service" className="text-xs text-secondary-foreground/70 hover:text-primary transition-colors">
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link to="/refund-policy" className="text-xs text-secondary-foreground/70 hover:text-primary transition-colors">
+                  Refund Policy
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -76,11 +53,13 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-2 text-xs text-secondary-foreground/70">
                 <Phone className="w-3 h-3 text-primary" />
-                <span>+977 9800000000</span>
+                <span>+977 9708500000</span>
               </li>
               <li className="flex items-center gap-2 text-xs text-secondary-foreground/70">
                 <Mail className="w-3 h-3 text-primary" />
-                <span>hello@humbri.com</span>
+                <a href="mailto:support@humbri.com" className="hover:text-primary transition-colors">
+                  support@humbri.com
+                </a>
               </li>
             </ul>
           </div>
@@ -91,12 +70,15 @@ const Footer = () => {
             © {currentYear} Humbri. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
-            <Link to="/privacy" className="text-xs text-secondary-foreground/50 hover:text-primary transition-colors">
-              Privacy
-            </Link>
-            <Link to="/terms" className="text-xs text-secondary-foreground/50 hover:text-primary transition-colors">
-              Terms
-            </Link>
+            <a href="#" className="p-1.5 rounded-full bg-secondary-foreground/5 hover:bg-primary/10 hover:text-primary transition-colors">
+              <Facebook className="w-3 h-3" />
+            </a>
+            <a href="#" className="p-1.5 rounded-full bg-secondary-foreground/5 hover:bg-primary/10 hover:text-primary transition-colors">
+              <Instagram className="w-3 h-3" />
+            </a>
+            <a href="#" className="p-1.5 rounded-full bg-secondary-foreground/5 hover:bg-primary/10 hover:text-primary transition-colors">
+              <Twitter className="w-3 h-3" />
+            </a>
           </div>
         </div>
       </div>

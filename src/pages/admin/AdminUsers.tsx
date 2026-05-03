@@ -39,7 +39,7 @@ const AdminUsers = () => {
         .from("profiles")
         .select("*")
         .order("created_at", { ascending: false });
-      
+
       if (error) throw error;
       return data;
     },
@@ -51,18 +51,18 @@ const AdminUsers = () => {
       const { data, error } = await supabase
         .from("user_roles")
         .select("*");
-      
+
       if (error) throw error;
       return data;
     },
   });
 
   const addRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: "admin" | "host" | "user" }) => {
+    mutationFn: async ({ userId, email, role }: { userId: string; email: string; role: "admin" | "host" | "user" }) => {
       const { error } = await supabase
         .from("user_roles")
-        .insert({ user_id: userId, role: role });
-      
+        .insert({ user_id: userId, role: role, email: email } as any);
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -70,10 +70,11 @@ const AdminUsers = () => {
       toast.success("Role added successfully");
     },
     onError: (error: any) => {
+      console.error("Add role error:", error);
       if (error.message?.includes("duplicate")) {
         toast.error("User already has this role");
       } else {
-        toast.error("Failed to add role");
+        toast.error(`Failed to add role: ${error.message}`);
       }
     },
   });
@@ -85,7 +86,7 @@ const AdminUsers = () => {
         .delete()
         .eq("user_id", userId)
         .eq("role", role);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -93,8 +94,9 @@ const AdminUsers = () => {
       toast.success("Role removed successfully");
       setRemoveRoleDialog(null);
     },
-    onError: () => {
-      toast.error("Failed to remove role");
+    onError: (error: any) => {
+      console.error("Remove role error:", error);
+      toast.error(`Failed to remove role: ${error.message}`);
     },
   });
 
@@ -102,25 +104,25 @@ const AdminUsers = () => {
     return userRoles?.filter(r => r.user_id === userId).map(r => r.role) || [];
   };
 
-  const handleAddRole = (userId: string, role: "admin" | "host" | "user") => {
-    addRoleMutation.mutate({ userId, role });
+  const handleAddRole = (userId: string, email: string, role: "admin" | "host" | "user") => {
+    addRoleMutation.mutate({ userId, email, role });
   };
 
   const handleRemoveRole = () => {
     if (removeRoleDialog) {
-      removeRoleMutation.mutate({ 
-        userId: removeRoleDialog.userId, 
-        role: removeRoleDialog.role as "admin" | "host" | "user" 
+      removeRoleMutation.mutate({
+        userId: removeRoleDialog.userId,
+        role: removeRoleDialog.role as "admin" | "host" | "user"
       });
     }
   };
   const filteredProfiles = profiles?.filter(p => {
     const matchesSearch = p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.phone?.includes(searchQuery);
-    
+
     if (roleFilter === "all") return matchesSearch;
-    
-    const roles = getRolesForUser(p.user_id);
+
+    const roles = getRolesForUser(p.id);
     return matchesSearch && roles.includes(roleFilter);
   });
 
@@ -209,10 +211,10 @@ const AdminUsers = () => {
                   </tr>
                 ) : (
                   filteredProfiles?.map((profile) => {
-                    const roles = getRolesForUser(profile.user_id);
+                    const roles = getRolesForUser(profile.id);
                     const isHost = roles.includes("host");
                     const isAdmin = roles.includes("admin");
-                    
+
                     return (
                       <tr key={profile.id} className="border-b border-border last:border-0 hover:bg-muted/30">
                         <td className="p-4">
@@ -226,7 +228,7 @@ const AdminUsers = () => {
                             </div>
                             <div>
                               <p className="font-medium text-foreground">{profile.full_name || "Unnamed User"}</p>
-                              <p className="text-xs text-muted-foreground font-mono">{profile.user_id.slice(0, 8)}...</p>
+                              <p className="text-xs text-muted-foreground font-mono">{profile.id.slice(0, 8)}...</p>
                             </div>
                           </div>
                         </td>
@@ -239,11 +241,11 @@ const AdminUsers = () => {
                         <td className="p-4">
                           <div className="flex gap-1 flex-wrap">
                             {roles.map(role => (
-                              <Badge 
-                                key={role} 
+                              <Badge
+                                key={role}
                                 variant={role === "admin" ? "destructive" : role === "host" ? "default" : "secondary"}
                                 className="text-xs cursor-pointer"
-                                onClick={() => role !== "user" && setRemoveRoleDialog({ userId: profile.user_id, role })}
+                                onClick={() => role !== "user" && setRemoveRoleDialog({ userId: profile.id, role })}
                               >
                                 {role}
                                 {role !== "user" && " ×"}
@@ -266,21 +268,21 @@ const AdminUsers = () => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
                               {!isHost && (
-                                <DropdownMenuItem onClick={() => handleAddRole(profile.user_id, "host")}>
+                                <DropdownMenuItem onClick={() => handleAddRole(profile.id, (profile as any).email, "host")}>
                                   <UserCheck className="w-4 h-4 mr-2 text-success" />
                                   Make Host
                                 </DropdownMenuItem>
                               )}
                               {!isAdmin && (
-                                <DropdownMenuItem onClick={() => handleAddRole(profile.user_id, "admin")}>
+                                <DropdownMenuItem onClick={() => handleAddRole(profile.id, (profile as any).email, "admin")}>
                                   <Shield className="w-4 h-4 mr-2 text-primary" />
                                   Make Admin
                                 </DropdownMenuItem>
                               )}
                               {(isHost || isAdmin) && <DropdownMenuSeparator />}
                               {isHost && (
-                                <DropdownMenuItem 
-                                  onClick={() => setRemoveRoleDialog({ userId: profile.user_id, role: "host" })}
+                                <DropdownMenuItem
+                                  onClick={() => setRemoveRoleDialog({ userId: profile.id, role: "host" })}
                                   className="text-warning"
                                 >
                                   <UserX className="w-4 h-4 mr-2" />
@@ -288,8 +290,8 @@ const AdminUsers = () => {
                                 </DropdownMenuItem>
                               )}
                               {isAdmin && (
-                                <DropdownMenuItem 
-                                  onClick={() => setRemoveRoleDialog({ userId: profile.user_id, role: "admin" })}
+                                <DropdownMenuItem
+                                  onClick={() => setRemoveRoleDialog({ userId: profile.id, role: "admin" })}
                                   className="text-destructive"
                                 >
                                   <UserX className="w-4 h-4 mr-2" />

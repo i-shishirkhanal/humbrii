@@ -1,13 +1,15 @@
-import { useState, useEffect, useRef } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { useRef, useMemo } from "react";
+import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+import { Loader2 } from "lucide-react";
 
 interface PropertyMapProps {
   location: string;
   propertyName: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
-// Nepal locations with coordinates
+// Nepal locations with coordinates (Fallback)
 const locationCoordinates: Record<string, [number, number]> = {
   "Kathmandu": [27.7172, 85.3240],
   "Pokhara": [28.2096, 83.9856],
@@ -19,72 +21,70 @@ const locationCoordinates: Record<string, [number, number]> = {
   "Lumbini": [27.4833, 83.2833],
 };
 
-const getCoordinatesFromLocation = (location: string): [number, number] => {
+const getCoordinatesFromLocation = (location: string): { lat: number, lng: number } => {
   for (const [city, coords] of Object.entries(locationCoordinates)) {
     if (location.toLowerCase().includes(city.toLowerCase())) {
-      return coords;
+      return { lat: coords[0], lng: coords[1] };
     }
   }
-  return [27.7172, 85.3240]; // Default to Kathmandu
+  return { lat: 27.7172, lng: 85.3240 }; // Default to Kathmandu
 };
 
-const PropertyMap = ({ location, propertyName }: PropertyMapProps) => {
-  const mapRef = useRef<L.Map | null>(null);
-  const mapContainerRef = useRef<HTMLDivElement>(null);
+const containerStyle = {
+  width: "100%",
+  height: "100%",
+  minHeight: "300px",
+  borderRadius: "0.5rem",
+};
 
-  useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
+const PropertyMap = ({ location, propertyName, latitude, longitude }: PropertyMapProps) => {
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+  });
 
-    const coords = getCoordinatesFromLocation(location);
+  const center = useMemo(() => {
+    if (latitude && longitude) {
+      return { lat: latitude, lng: longitude };
+    }
+    return getCoordinatesFromLocation(location);
+  }, [latitude, longitude, location]);
 
-    mapRef.current = L.map(mapContainerRef.current).setView(coords, 14);
+  const mapRef = useRef<google.maps.Map | null>(null);
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(mapRef.current);
-
-    // Add marker
-    const icon = L.divIcon({
-      className: "custom-marker",
-      html: `
-        <div style="
-          background-color: hsl(var(--primary));
-          width: 40px;
-          height: 40px;
-          border-radius: 50% 50% 50% 0;
-          transform: rotate(-45deg);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-          border: 3px solid white;
-        ">
-          <div style="transform: rotate(45deg); font-size: 16px;">📍</div>
-        </div>
-      `,
-      iconSize: [40, 40],
-      iconAnchor: [20, 40],
-      popupAnchor: [0, -40],
-    });
-
-    L.marker(coords, { icon })
-      .addTo(mapRef.current)
-      .bindPopup(`<strong>${propertyName}</strong><br/>${location}`);
-
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
-  }, [location, propertyName]);
+  if (!isLoaded) {
+    return (
+      <div className="w-full h-full min-h-[300px] bg-muted/20 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
-    <div 
-      ref={mapContainerRef} 
-      className="w-full h-[300px] rounded-xl overflow-hidden"
-      style={{ zIndex: 1 }}
-    />
+    <div className="w-full h-full min-h-[300px] bg-muted/20 rounded-lg overflow-hidden">
+      <GoogleMap
+        mapContainerStyle={containerStyle}
+        center={center}
+        zoom={14}
+        onLoad={(map) => {
+          mapRef.current = map;
+        }}
+        onUnmount={() => {
+          mapRef.current = null;
+        }}
+        options={{
+          disableDefaultUI: true, // Clean look
+          zoomControl: true, // Enable zoom
+          gestureHandling: "cooperative", // Better scrolling
+        }}
+      >
+        <Marker
+          position={center}
+          title={propertyName}
+        />
+        {/* Privacy Circle logic usually needs 'Circle' component if we want exact equivalent, but Marker is fine for now */}
+      </GoogleMap>
+    </div>
   );
 };
 

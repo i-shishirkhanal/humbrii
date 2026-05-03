@@ -10,6 +10,7 @@ const HostLayout = ({ children }: HostLayoutProps) => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <div className="h-16" />
       <HostNav />
       <main className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-6">
         {children}

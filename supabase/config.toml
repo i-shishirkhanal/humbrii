@@ -1,1 +1,5 @@
-project_id = "zeozszafzxagbtpydznw"
+[functions.payment-initiation]
+verify_jwt = false
+
+[functions.esewa-payment]
+verify_jwt = false

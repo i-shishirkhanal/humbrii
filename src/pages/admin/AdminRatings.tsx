@@ -20,98 +20,116 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Star, Search, Edit, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
 import { toast } from "sonner";
+import { useState } from "react";
 
 // Mock ratings data
-const mockRatings = [
-  {
-    id: "1",
-    propertyName: "Himalayan View Resort",
-    userName: "John Doe",
-    rating: 5,
-    isVisible: true,
-    createdAt: "2024-12-20",
-  },
-  {
-    id: "2",
-    propertyName: "Heritage Boutique Hotel",
-    userName: "Jane Smith",
-    rating: 4,
-    isVisible: true,
-    createdAt: "2024-12-19",
-  },
-  {
-    id: "3",
-    propertyName: "Lakeside Paradise Villa",
-    userName: "Mike Wilson",
-    rating: 3,
-    isVisible: false,
-    createdAt: "2024-12-18",
-  },
-  {
-    id: "4",
-    propertyName: "Mountain Retreat",
-    userName: "Sarah Johnson",
-    rating: 5,
-    isVisible: true,
-    createdAt: "2024-12-17",
-  },
-  {
-    id: "5",
-    propertyName: "Himalayan View Resort",
-    userName: "Tom Brown",
-    rating: 2,
-    isVisible: true,
-    createdAt: "2024-12-16",
-  },
-];
+
 
 const AdminRatings = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [ratings, setRatings] = useState(mockRatings);
-  const [editingRating, setEditingRating] = useState<typeof mockRatings[0] | null>(null);
+  const [editingRating, setEditingRating] = useState<any | null>(null);
   const [editedRating, setEditedRating] = useState(0);
 
+  const { data: ratings = [], isLoading, refetch } = useQuery({
+    queryKey: ["admin-ratings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("property_ratings")
+        .select(`
+          *,
+          properties (name),
+          profiles (full_name)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data.map((r: any) => ({
+        id: r.id,
+        propertyName: r.properties?.name || "Unknown Property",
+        userName: r.profiles?.full_name || "Anonymous",
+        rating: r.rating,
+        review: r.review, // Added review content
+        isVisible: r.is_visible,
+        createdAt: format(new Date(r.created_at), "yyyy-MM-dd"),
+      }));
+    },
+  });
+
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: async ({ id, isVisible }: { id: string; isVisible: boolean }) => {
+      const { error } = await supabase
+        .from("property_ratings")
+        .update({ is_visible: isVisible })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Rating visibility updated");
+      refetch();
+    },
+    onError: () => toast.error("Failed to update visibility"),
+  });
+
+  const updateRatingMutation = useMutation({
+    mutationFn: async ({ id, rating }: { id: string; rating: number }) => {
+      const { error } = await supabase
+        .from("property_ratings")
+        .update({ rating: rating })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Rating updated successfully");
+      setEditingRating(null);
+      refetch();
+    },
+    onError: () => toast.error("Failed to update rating"),
+  });
+
+  const deleteRatingMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("property_ratings")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Rating deleted successfully");
+      refetch();
+    },
+    onError: () => toast.error("Failed to delete rating"),
+  });
+
   const filteredRatings = ratings.filter(
-    (rating) =>
+    (rating: any) =>
       rating.propertyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       rating.userName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const averageRating = (ratings.reduce((acc, r) => acc + r.rating, 0) / ratings.length).toFixed(1);
-  const visibleRatings = ratings.filter((r) => r.isVisible).length;
+  const averageRating = ratings.length
+    ? (ratings.reduce((acc: number, r: any) => acc + r.rating, 0) / ratings.length).toFixed(1)
+    : "0.0";
 
-  const toggleVisibility = (id: string) => {
-    setRatings(
-      ratings.map((r) =>
-        r.id === id ? { ...r, isVisible: !r.isVisible } : r
-      )
-    );
-    toast.success("Rating visibility updated");
-  };
+  const visibleRatings = ratings.filter((r: any) => r.isVisible).length;
 
-  const openEditDialog = (rating: typeof mockRatings[0]) => {
-    setEditingRating(rating);
-    setEditedRating(rating.rating);
+  const toggleVisibility = (id: string, currentStatus: boolean) => {
+    toggleVisibilityMutation.mutate({ id, isVisible: !currentStatus });
   };
 
   const saveRating = () => {
     if (!editingRating) return;
-    setRatings(
-      ratings.map((r) =>
-        r.id === editingRating.id
-          ? { ...r, rating: editedRating }
-          : r
-      )
-    );
-    setEditingRating(null);
-    toast.success("Rating updated successfully");
+    updateRatingMutation.mutate({ id: editingRating.id, rating: editedRating });
   };
 
   const deleteRating = (id: string) => {
-    setRatings(ratings.filter((r) => r.id !== id));
-    toast.success("Rating deleted successfully");
+    if (confirm("Are you sure you want to delete this rating?")) {
+      deleteRatingMutation.mutate(id);
+    }
   };
 
   const renderStars = (rating: number, interactive = false, onChange?: (value: number) => void) => {
@@ -120,11 +138,10 @@ const AdminRatings = () => {
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`w-5 h-5 ${
-              star <= rating
-                ? "text-primary fill-primary"
-                : "text-muted-foreground"
-            } ${interactive ? "cursor-pointer hover:scale-110 transition-transform" : ""}`}
+            className={`w-5 h-5 ${star <= rating
+              ? "text-primary fill-primary"
+              : "text-muted-foreground"
+              } ${interactive ? "cursor-pointer hover:scale-110 transition-transform" : ""}`}
             onClick={() => interactive && onChange && onChange(star)}
           />
         ))}
@@ -216,39 +233,52 @@ const AdminRatings = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRatings.map((rating) => (
-                  <TableRow key={rating.id}>
-                    <TableCell className="font-medium">{rating.propertyName}</TableCell>
-                    <TableCell>{rating.userName}</TableCell>
-                    <TableCell>{renderStars(rating.rating)}</TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={rating.isVisible}
-                        onCheckedChange={() => toggleVisibility(rating.id)}
-                      />
-                    </TableCell>
-                    <TableCell>{rating.createdAt}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(rating)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => deleteRating(rating.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">Loading ratings...</TableCell>
                   </TableRow>
-                ))}
+                ) : filteredRatings.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">No ratings found</TableCell>
+                  </TableRow>
+                ) : (
+                  filteredRatings.map((rating: any) => (
+                    <TableRow key={rating.id}>
+                      <TableCell className="font-medium">{rating.propertyName}</TableCell>
+                      <TableCell>{rating.userName}</TableCell>
+                      <TableCell>{renderStars(rating.rating)}</TableCell>
+                      <TableCell>
+                        <Switch
+                          checked={rating.isVisible}
+                          onCheckedChange={() => toggleVisibility(rating.id, rating.isVisible)}
+                        />
+                      </TableCell>
+                      <TableCell>{rating.createdAt}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditingRating(rating);
+                              setEditedRating(rating.rating);
+                            }}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => deleteRating(rating.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>

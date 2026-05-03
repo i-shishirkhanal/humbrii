@@ -38,7 +38,7 @@ const HostCalendar = () => {
         .from("properties")
         .select("id, name, base_price")
         .eq("host_id", user.id);
-      
+
       if (error) throw error;
       return data || [];
     },
@@ -57,17 +57,17 @@ const HostCalendar = () => {
     queryKey: ["propertyAvailability", selectedProperty, format(currentMonth, "yyyy-MM")],
     queryFn: async () => {
       if (!selectedProperty) return [];
-      
+
       const monthStart = format(startOfMonth(currentMonth), "yyyy-MM-dd");
       const monthEnd = format(endOfMonth(currentMonth), "yyyy-MM-dd");
-      
+
       const { data, error } = await supabase
         .from("property_availability")
         .select("date, is_available, price_override")
         .eq("property_id", selectedProperty)
         .gte("date", monthStart)
         .lte("date", monthEnd);
-      
+
       if (error) throw error;
       return data || [];
     },
@@ -91,7 +91,7 @@ const HostCalendar = () => {
         const { error } = await supabase
           .from("property_availability")
           .upsert(record, { onConflict: "property_id,date" });
-        
+
         if (error) throw error;
       }
     },
@@ -101,7 +101,7 @@ const HostCalendar = () => {
       setSelectedDates([]);
       setBulkPrice("");
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Failed to update availability");
     },
   });
@@ -136,7 +136,7 @@ const HostCalendar = () => {
     }
 
     const priceOverride = bulkPrice ? parseFloat(bulkPrice) : null;
-    
+
     updateAvailability.mutate({
       dates: selectedDates,
       is_available: bulkAvailable,
@@ -323,8 +323,8 @@ const HostCalendar = () => {
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {bulkAvailable 
-                          ? "Guests can book these dates" 
+                        {bulkAvailable
+                          ? "Guests can book these dates"
                           : "These dates will be blocked"}
                       </p>
                     </div>

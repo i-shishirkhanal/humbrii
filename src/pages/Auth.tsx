@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { Link, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,10 +15,11 @@ const passwordSchema = z.string().min(6, "Password must be at least 6 characters
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, signIn, signUp, loading: authLoading } = useAuth();
-  
+
   const initialMode = searchParams.get("mode") === "signup" ? "signup" : "signin";
-  
+
   const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,11 +35,13 @@ const Auth = () => {
   });
 
   // Redirect if already logged in
+  // Redirect if already logged in
   useEffect(() => {
     if (user && !authLoading) {
-      navigate("/dashboard");
+      const from = location.state?.from?.pathname || "/dashboard";
+      navigate(from, { replace: true });
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, location]);
 
   const validateForm = () => {
     const newErrors = { name: "", email: "", password: "" };
@@ -70,14 +73,15 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setIsSubmitting(true);
 
     try {
       if (mode === "signup") {
-        const { error } = await signUp(formData.email, formData.password, formData.name);
+        const role = searchParams.get("role") || undefined;
+        const { error } = await signUp(formData.email, formData.password, formData.name, role);
         if (error) {
           if (error.message.includes("already registered")) {
             toast.error("This email is already registered. Please sign in instead.");
@@ -97,7 +101,8 @@ const Auth = () => {
           }
         } else {
           toast.success("Welcome back!");
-          navigate("/dashboard");
+          const from = location.state?.from?.pathname || "/dashboard";
+          navigate(from, { replace: true });
         }
       }
     } catch (error) {
@@ -137,7 +142,7 @@ const Auth = () => {
           </div>
           <span className="text-xl font-bold text-foreground">Humbri</span>
         </Link>
-        
+
         <div className="max-w-md">
           <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
             Find Your Perfect Stay
@@ -146,7 +151,7 @@ const Auth = () => {
             From hourly escapes to full stays, discover spaces that fit your lifestyle. Join thousands of happy travelers.
           </p>
         </div>
-        
+
         <p className="text-muted-foreground text-sm">
           © 2024 Humbri. All rights reserved.
         </p>

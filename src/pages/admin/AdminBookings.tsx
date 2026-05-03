@@ -1,116 +1,58 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Calendar, Building2, User, FileText, DollarSign, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, Calendar, Building2, User, Loader2, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, Clock, X, Check, DollarSign } from "lucide-react";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
-
-// Mock data with payment details
-const mockBookings = [
-  {
-    id: "BK001",
-    property_name: "Himalayan View Resort",
-    guest_name: "Ram Sharma",
-    guest_email: "ram@example.com",
-    check_in: new Date("2024-01-15"),
-    check_out: new Date("2024-01-18"),
-    status: "confirmed",
-    total_amount: 25500,
-    paid_amount: 25500,
-    remaining_amount: 0,
-    payment_status: "full",
-    payment_method: "eSewa",
-    created_at: new Date("2024-01-10"),
-  },
-  {
-    id: "BK002",
-    property_name: "Lakeside Paradise Villa",
-    guest_name: "Jane Smith",
-    guest_email: "jane@example.com",
-    check_in: new Date("2024-01-20"),
-    check_out: new Date("2024-01-22"),
-    status: "pending",
-    total_amount: 16000,
-    paid_amount: 8000,
-    remaining_amount: 8000,
-    payment_status: "partial",
-    payment_method: "Khalti",
-    created_at: new Date("2024-01-12"),
-  },
-  {
-    id: "BK003",
-    property_name: "City Center Express",
-    guest_name: "Mike Johnson",
-    guest_email: "mike@example.com",
-    check_in: new Date("2024-01-10"),
-    check_out: new Date("2024-01-10"),
-    status: "completed",
-    total_amount: 3000,
-    paid_amount: 3000,
-    remaining_amount: 0,
-    payment_status: "full",
-    payment_method: "Cash",
-    created_at: new Date("2024-01-08"),
-  },
-  {
-    id: "BK004",
-    property_name: "Mountain Retreat",
-    guest_name: "Sita Gurung",
-    guest_email: "sita@example.com",
-    check_in: new Date("2024-01-25"),
-    check_out: new Date("2024-01-28"),
-    status: "confirmed",
-    total_amount: 18000,
-    paid_amount: 6000,
-    remaining_amount: 12000,
-    payment_status: "partial",
-    payment_method: "Bank Transfer",
-    created_at: new Date("2024-01-14"),
-  },
-];
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { bookingsService, BookingWithDetails } from "@/services/bookings.service";
 
 const AdminBookings = () => {
+  const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "confirmed" | "completed" | "cancelled">("all");
-  const [paymentFilter, setPaymentFilter] = useState<"all" | "full" | "partial" | "unpaid">("all");
+  const [activeTab, setActiveTab] = useState<string>("all");
 
-  const filteredBookings = mockBookings.filter(b => {
-    const matchesSearch = b.property_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.guest_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || b.status === statusFilter;
-    const matchesPayment = paymentFilter === "all" || 
-      (paymentFilter === "full" && b.payment_status === "full") ||
-      (paymentFilter === "partial" && b.payment_status === "partial") ||
-      (paymentFilter === "unpaid" && b.paid_amount === 0);
-    return matchesSearch && matchesStatus && matchesPayment;
+  const { data: bookings = [], isLoading, isFetching } = useQuery({
+    queryKey: ["admin-bookings", page, activeTab, searchQuery],
+    queryFn: () => bookingsService.getAdminBookings(page, activeTab, searchQuery),
+    placeholderData: keepPreviousData,
   });
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      confirmed: "default",
-      pending: "secondary",
-      completed: "outline",
-      cancelled: "destructive",
-    };
-    return variants[status] || "secondary";
+  const getPaidAmount = (booking: BookingWithDetails) => {
+    // Robust logic should be in backend/service, but for UI display:
+    if (booking.payment_status === 'paid') return Number(booking.total_amount);
+    if (booking.payment_status === 'partial') return Number(booking.paid_amount || 0); // Assuming paid_amount exists on join or we calculate
+    // Fallback if paid_amount not in type yet, assume logic
+    if (booking.payment_status === 'partial') return Number(booking.total_amount) * 0.20;
+    return 0;
   };
 
-  const getPaymentBadge = (booking: typeof mockBookings[0]) => {
-    if (booking.payment_status === "full") {
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "confirmed": return "default";
+      case "pending": return "secondary";
+      case "completed": return "outline";
+      case "cancelled": return "destructive";
+      default: return "secondary";
+    }
+  };
+
+  const getPaymentBadge = (booking: BookingWithDetails) => {
+    const paid = getPaidAmount(booking);
+    const total = Number(booking.total_amount);
+    const percentage = total > 0 ? Math.round((paid / total) * 100) : 0;
+
+    if (booking.payment_status === "paid") {
       return <Badge className="bg-success/10 text-success border-success/20">Fully Paid</Badge>;
     } else if (booking.payment_status === "partial") {
-      return <Badge className="bg-warning/10 text-warning border-warning/20">Partial ({Math.round((booking.paid_amount / booking.total_amount) * 100)}%)</Badge>;
+      return <Badge className="bg-warning/10 text-warning border-warning/20">Partial ({percentage}%)</Badge>;
     }
     return <Badge variant="destructive">Unpaid</Badge>;
   };
-
-  const totalBookings = mockBookings.length;
-  const fullyPaid = mockBookings.filter(b => b.payment_status === "full").length;
-  const partiallyPaid = mockBookings.filter(b => b.payment_status === "partial").length;
-  const totalPending = mockBookings.reduce((acc, b) => acc + b.remaining_amount, 0);
 
   return (
     <DashboardLayout role="admin">
@@ -120,71 +62,29 @@ const AdminBookings = () => {
           <p className="text-muted-foreground mt-1">View and manage all bookings with payment details</p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-          <div className="bg-card rounded-xl border border-border p-4">
-            <p className="text-2xl font-bold text-foreground">{totalBookings}</p>
-            <p className="text-sm text-muted-foreground">Total Bookings</p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4">
-            <p className="text-2xl font-bold text-warning">{mockBookings.filter(b => b.status === "pending").length}</p>
-            <p className="text-sm text-muted-foreground">Pending</p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-success" />
-              <p className="text-2xl font-bold text-success">{fullyPaid}</p>
-            </div>
-            <p className="text-sm text-muted-foreground">Fully Paid</p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-warning" />
-              <p className="text-2xl font-bold text-warning">{partiallyPaid}</p>
-            </div>
-            <p className="text-sm text-muted-foreground">Partial Payment</p>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4">
-            <p className="text-2xl font-bold text-destructive">NPR {totalPending.toLocaleString()}</p>
-            <p className="text-sm text-muted-foreground">Pending Amount</p>
-          </div>
-        </div>
-
-        {/* Filters */}
+        {/* Filters & Tabs */}
         <div className="flex flex-col gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search bookings..."
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by ID or Guest..."
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
+              />
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <span className="text-sm text-muted-foreground self-center mr-2">Status:</span>
-            {(["all", "pending", "confirmed", "completed", "cancelled"] as const).map((status) => (
-              <Button
-                key={status}
-                variant={statusFilter === status ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStatusFilter(status)}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </Button>
-            ))}
-            <span className="text-sm text-muted-foreground self-center ml-4 mr-2">Payment:</span>
-            {(["all", "full", "partial", "unpaid"] as const).map((type) => (
-              <Button
-                key={type}
-                variant={paymentFilter === type ? "default" : "outline"}
-                size="sm"
-                onClick={() => setPaymentFilter(type)}
-              >
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </Button>
-            ))}
-          </div>
+
+          <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); setPage(0); }} className="w-full">
+            <TabsList>
+              {["all", "pending", "confirmed", "completed", "cancelled"].map((status) => (
+                <TabsTrigger key={status} value={status} className="capitalize">
+                  {status}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Bookings Table */}
@@ -193,99 +93,119 @@ const AdminBookings = () => {
             <table className="w-full">
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Booking</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Booking / Property</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Guest</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Dates</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Total</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Paid</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Remaining</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Payment</th>
-                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Progress</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Financials</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredBookings.length === 0 ? (
+                {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                      <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+                    </td>
+                  </tr>
+                ) : bookings.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
                       No bookings found
                     </td>
                   </tr>
                 ) : (
-                  filteredBookings.map((booking) => (
-                    <tr key={booking.id} className="border-b border-border last:border-0 hover:bg-muted/30">
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Building2 className="w-5 h-5 text-primary" />
+                  bookings.map((booking) => {
+                    const paid = getPaidAmount(booking);
+                    const total = Number(booking.total_amount);
+                    const fullProperty = booking.properties?.name || "Unknown Property";
+                    const guestName = booking.profiles?.full_name || "Unknown Guest";
+                    const guestEmail = booking.profiles?.email || "No email";
+
+                    return (
+                      <tr key={booking.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                              <Building2 className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground truncate max-w-[200px]">{fullProperty}</p>
+                              <p className="text-xs text-muted-foreground">#{booking.id.slice(0, 8)}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-foreground">{booking.property_name}</p>
-                            <p className="text-xs text-muted-foreground">#{booking.id}</p>
+                        </td>
+                        <td className="p-4">
+                          <div className="max-w-[150px]">
+                            <div className="flex items-center gap-2">
+                              <User className="w-3 h-3 text-muted-foreground" />
+                              <span className="text-sm font-medium truncate">{guestName}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate" title={guestEmail}>{guestEmail}</p>
                           </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">{booking.guest_name}</span>
+                        </td>
+                        <td className="p-4">
+                          <div className="text-sm">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3 text-muted-foreground" />
+                              <span>{format(new Date(booking.check_in_date), "MMM d")} - {format(new Date(booking.check_out_date), "MMM d")}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground pl-4">{new Date(booking.check_in_date).getFullYear()}</p>
                           </div>
-                          <p className="text-xs text-muted-foreground ml-6">{booking.guest_email}</p>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Calendar className="w-4 h-4 text-muted-foreground" />
-                          <span>{format(booking.check_in, "MMM d")} - {format(booking.check_out, "MMM d, yyyy")}</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <Badge variant={getStatusBadge(booking.status)}>
-                          {booking.status}
-                        </Badge>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-medium">NPR {booking.total_amount.toLocaleString()}</span>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-medium text-success">NPR {booking.paid_amount.toLocaleString()}</span>
-                      </td>
-                      <td className="p-4">
-                        {booking.remaining_amount > 0 ? (
-                          <span className="font-medium text-warning">NPR {booking.remaining_amount.toLocaleString()}</span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        {getPaymentBadge(booking)}
-                      </td>
-                      <td className="p-4 min-w-[120px]">
-                        <div className="space-y-1">
-                          <Progress 
-                            value={(booking.paid_amount / booking.total_amount) * 100} 
-                            className="h-2"
-                          />
-                          <span className="text-xs text-muted-foreground">
-                            {Math.round((booking.paid_amount / booking.total_amount) * 100)}% paid
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="p-4">
+                          <Badge variant={getStatusBadge(booking.booking_status)}>
+                            {booking.booking_status}
+                          </Badge>
+                        </td>
+                        <td className="p-4">
+                          <div className="space-y-1 min-w-[120px]">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">Total:</span>
+                              <span className="font-medium">NPR {total.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">Paid:</span>
+                              <span className="text-success">NPR {paid.toLocaleString()}</span>
+                            </div>
+                            <div className="pt-1">
+                              {getPaymentBadge(booking)}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <Button variant="ghost" size="sm">Details</Button>
+                        </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>
           </div>
         </div>
 
-        <div className="bg-muted/30 rounded-xl border border-border p-6 text-center">
-          <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-          <h3 className="font-semibold text-foreground mb-1">Booking System Coming Soon</h3>
-          <p className="text-sm text-muted-foreground">
-            Full booking management with real-time data will be available once the booking system is implemented.
-          </p>
+        {/* Pagination Controls */}
+        <div className="flex justify-center flex-col items-center gap-2 mt-4">
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 0 || isFetching}
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={bookings.length < 10 || isFetching}
+              onClick={() => setPage(p => p + 1)}
+            >
+              Next <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+          {isFetching && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
         </div>
       </div>
     </DashboardLayout>

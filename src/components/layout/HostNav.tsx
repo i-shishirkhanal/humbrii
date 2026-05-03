@@ -23,9 +23,9 @@ const HostNav = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border md:relative md:border-t-0 md:border-b md:bg-background">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border md:sticky md:top-16 md:bottom-auto md:border-t-0 md:border-b md:z-30">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-around md:justify-start md:gap-1 h-16">
+        <div className="flex items-center justify-around md:justify-start md:gap-1 h-16 md:h-14">
           {navItems.map((item) => (
             <Link
               key={item.href}

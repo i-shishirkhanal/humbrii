@@ -1,13 +1,16 @@
+
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import PropertyCard from "@/components/cards/PropertyCard";
 import SearchWidget, { BookingType } from "@/components/search/SearchWidget";
-import { MapPin } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { MapPin, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { propertiesService } from "@/services/properties.service";
+import { PropertyCategory, PROPERTY_CATEGORIES } from "@/config/constants";
+import { Button } from "@/components/ui/button";
 
 const bookingTypeLabels: Record<string, string> = {
   hourly: "Hourly",
@@ -17,51 +20,38 @@ const bookingTypeLabels: Record<string, string> = {
 };
 
 // Map URL type to database category
-const typeToCategory = (type: string): string => {
+const typeToCategory = (type: string): PropertyCategory => {
   switch (type) {
-    case "hourly": return "hourly";
-    case "daycation": return "daycation";
-    case "fullstay": return "full_stay";
-    case "vibe": return "vibe_chill";
-    default: return "full_stay";
+    case "hourly": return PROPERTY_CATEGORIES.HOURLY;
+    case "daycation": return PROPERTY_CATEGORIES.DAYCATION;
+    case "fullstay": return PROPERTY_CATEGORIES.FULL_STAY;
+    case "vibe": return PROPERTY_CATEGORIES.VIBE_CHILL;
+    default: return PROPERTY_CATEGORIES.FULL_STAY;
   }
 };
 
 const Properties = () => {
   const [searchParams] = useSearchParams();
+  const [page, setPage] = useState(0);
+
   const typeFromUrl = (searchParams.get("type") || "fullstay") as BookingType;
   const locationFromUrl = searchParams.get("location") || "";
-  const guestsFromUrl = searchParams.get("guests") || "";
 
-  const category = typeToCategory(typeFromUrl) as "hourly" | "daycation" | "full_stay" | "vibe_chill";
+  const category = typeToCategory(typeFromUrl);
 
-  const { data: properties = [], isLoading } = useQuery({
-    queryKey: ["properties", category],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("properties")
-        .select("*")
-        .eq("category", category)
-        .eq("is_published", true)
-        .eq("status", "active");
+  // Reset page when category or location changes
+  useEffect(() => {
+    setPage(0);
+  }, [category, locationFromUrl]);
 
-      if (error) throw error;
-      return data || [];
-    },
+  const { data: properties = [], isLoading, isFetching } = useQuery({
+    queryKey: ["properties", category, page, locationFromUrl],
+    queryFn: () => propertiesService.getProperties(page, category, "active", locationFromUrl),
+    placeholderData: keepPreviousData,
   });
 
-  const filteredProperties = useMemo(() => {
-    return properties.filter((property) => {
-      // Filter by location if provided
-      if (locationFromUrl) {
-        const locationMatch = property.location
-          .toLowerCase()
-          .includes(locationFromUrl.toLowerCase());
-        if (!locationMatch) return false;
-      }
-      return true;
-    });
-  }, [properties, locationFromUrl]);
+  // Client-side filtering removed in favor of Server-side search
+  const filteredProperties = properties;
 
   const pageTitle = bookingTypeLabels[typeFromUrl] || "Properties";
 
@@ -88,45 +78,74 @@ const Properties = () => {
 
         <div className="container mx-auto px-4 mt-6 md:mt-8">
           {/* Results Count */}
-          <p className="text-xs md:text-sm text-muted-foreground mb-4 md:mb-6">
-            {isLoading ? (
-              "Loading properties..."
-            ) : (
-              <>
-                Showing {filteredProperties.length} {pageTitle.toLowerCase()} properties
-                {locationFromUrl && ` in "${locationFromUrl}"`}
-              </>
-            )}
-          </p>
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <p className="text-xs md:text-sm text-muted-foreground">
+              {isLoading ? (
+                "Loading properties..."
+              ) : (
+                <>
+                  Showing {filteredProperties.length} results (Page {page + 1})
+                  {locationFromUrl && ` matching "${locationFromUrl}"`}
+                </>
+              )}
+            </p>
+          </div>
 
           {/* Properties Grid */}
-          {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
+          {isLoading && !properties.length ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                 <div key={i} className="animate-pulse">
-                  <div className="bg-muted rounded-lg h-48 mb-3" />
+                  <div className="bg-muted rounded-lg h-32 md:h-40 mb-3" />
                   <div className="bg-muted rounded h-4 w-3/4 mb-2" />
                   <div className="bg-muted rounded h-4 w-1/2" />
                 </div>
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {filteredProperties.map((property) => (
-                <PropertyCard
-                  key={property.id}
-                  id={property.id}
-                  name={property.name}
-                  location={property.location}
-                  image={property.images?.[0] || "/placeholder.svg"}
-                  rating={4.5}
-                  pricePerNight={Number(property.base_price)}
-                  maxGuests={4}
-                  bedrooms={2}
-                  propertyType={property.category}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                {filteredProperties.map((property) => (
+                  <PropertyCard
+                    key={property.id}
+                    id={property.id}
+                    name={property.name}
+                    location={property.location || property.address || "Location not available"}
+                    image={property.images?.[0] || "/placeholder.svg"}
+                    rating={4.5} // TODO: Add real rating logic
+                    pricePerNight={Number(property.base_price || 0)}
+                    maxGuests={property.max_guests || 2}
+                    beds={property.beds || 1}
+                    bathrooms={property.bathrooms || 1}
+                    propertyType={property.category}
+                    compact={true}
+                  />
+                ))}
+              </div>
+
+              {/* Pagination Controls */}
+              <div className="flex justify-center flex-col items-center gap-2 mt-8">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === 0 || isFetching}
+                    onClick={() => setPage(p => Math.max(0, p - 1))}
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={properties.length < 10 || isFetching} // Assuming PAGE_SIZE is 10
+                    onClick={() => setPage(p => p + 1)}
+                  >
+                    Next <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+                {isFetching && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+              </div>
+            </>
           )}
 
           {!isLoading && filteredProperties.length === 0 && (
@@ -136,7 +155,7 @@ const Properties = () => {
                 No properties found
               </h3>
               <p className="text-muted-foreground text-sm">
-                Try a different category or search query
+                Try a different category or page
               </p>
             </div>
           )}

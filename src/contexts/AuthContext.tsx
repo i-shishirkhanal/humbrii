@@ -1,17 +1,14 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { authService } from "@/services/auth.service";
+import { AppRole } from "@/config/constants";
+import { toast } from "sonner";
 
-type AppRole = "admin" | "host" | "user";
+import { Database } from "@/integrations/supabase/types";
 
-interface Profile {
-  id: string;
-  user_id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  phone: string | null;
-}
+type Profile = Database['public']['Tables']['profiles']['Row'];
 
 interface AuthContextType {
   user: User | null;
@@ -19,8 +16,6 @@ interface AuthContextType {
   profile: Profile | null;
   roles: AppRole[];
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
   requestHostRole: () => Promise<{ error: Error | null }>;
@@ -37,89 +32,84 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = async (userId: string) => {
-    // Fetch profile
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-    
-    if (profileData) {
-      setProfile(profileData as Profile);
-    }
+    try {
+      // Parallel fetch for speed
+      const [profileData, rolesData] = await Promise.all([
+        authService.getProfile(userId),
+        authService.getUserRoles(userId)
+      ]);
 
-    // Fetch roles
-    const { data: rolesData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    
-    if (rolesData) {
-      setRoles(rolesData.map((r) => r.role as AppRole));
+      if (profileData) {
+        setProfile(profileData as Profile);
+      }
+      if (rolesData) {
+        setRoles(rolesData);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
-        // Defer Supabase calls with setTimeout
+
         if (session?.user) {
-          setTimeout(() => {
-            fetchUserData(session.user.id);
-          }, 0);
+          fetchUserData(session.user.id);
         } else {
           setProfile(null);
           setRoles([]);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Initial Check
+    authService.getSession().then((session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchUserData(session.user.id);
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
+  // Real-time role updates (Optional, but good for UX)
+  // We keep this but ensure it's strictly listening, not writing.
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('user-roles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_roles',
+          filter: `user_id=eq.${user.id}`,
         },
-      },
-    });
-    
-    return { error: error as Error | null };
-  };
+        () => {
+          refreshRoles();
+        }
+      )
+      .subscribe();
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    return { error: error as Error | null };
-  };
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await authService.signOut();
     setUser(null);
     setSession(null);
     setProfile(null);
@@ -130,34 +120,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshRoles = async () => {
     if (!user) return;
-    const { data: rolesData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id);
-    
-    if (rolesData) {
-      setRoles(rolesData.map((r) => r.role as AppRole));
+    try {
+      const rolesData = await authService.getUserRoles(user.id);
+      setRoles(rolesData);
+    } catch (error) {
+      console.error("Failed to refresh roles", error);
     }
   };
 
   const requestHostRole = async () => {
     if (!user) return { error: new Error("Not authenticated") };
-    
-    // Check if already a host
-    if (roles.includes("host")) {
+
+    if (roles.includes("host")) { // Check strictly against string or enum constant?
+      // "host" literal matches AppRole "host"
       return { error: null };
     }
 
-    // Insert host role
-    const { error } = await supabase
-      .from("user_roles")
-      .insert({ user_id: user.id, role: "host" });
-    
-    if (!error) {
+    try {
+      // SECURITY FIX: Replaced direct INSERT with RPC
+      // Cast function name to 'any' to bypass missing type definition in generated types
+      const { error } = await supabase.rpc('request_host_role' as any);
+      if (error) throw error;
+
+      // Optimistic update or wait for realtime?
+      // Let's wait for realtime or refresh.
       await refreshRoles();
+      return { error: null };
+    } catch (e: unknown) {
+      console.error("Error requesting host role:", e);
+      return { error: e as Error };
     }
-    
-    return { error: error as Error | null };
   };
 
   return (
@@ -168,8 +160,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         profile,
         roles,
         loading,
-        signUp,
-        signIn,
         signOut,
         hasRole,
         requestHostRole,

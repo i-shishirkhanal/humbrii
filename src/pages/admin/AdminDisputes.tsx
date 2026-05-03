@@ -5,46 +5,41 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, AlertTriangle, MessageSquare, Clock, CheckCircle, XCircle, FileText } from "lucide-react";
 import { format } from "date-fns";
-
-// Mock data
-const mockDisputes = [
-  {
-    id: "DSP001",
-    booking_id: "1",
-    guest_name: "John Doe",
-    host_name: "Host A",
-    reason: "Property not as described",
-    status: "open",
-    priority: "high",
-    created_at: new Date("2024-01-14"),
-  },
-  {
-    id: "DSP002",
-    booking_id: "2",
-    guest_name: "Jane Smith",
-    host_name: "Host B",
-    reason: "Cleanliness issues",
-    status: "investigating",
-    priority: "medium",
-    created_at: new Date("2024-01-12"),
-  },
-  {
-    id: "DSP003",
-    booking_id: "3",
-    guest_name: "Mike Johnson",
-    host_name: "Host C",
-    reason: "Check-in problems",
-    status: "resolved",
-    priority: "low",
-    created_at: new Date("2024-01-08"),
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminDisputes = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "open" | "investigating" | "resolved" | "closed">("all");
 
-  const filteredDisputes = mockDisputes.filter(d => {
+  const { data: disputes = [], isLoading } = useQuery({
+    queryKey: ["admin-disputes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("disputes")
+        .select(`
+          *,
+          guest:profiles!disputes_guest_id_fkey(full_name),
+          host:profiles!disputes_host_id_fkey(full_name)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      return data.map((d: any) => ({
+        id: d.id,
+        booking_id: d.booking_id, // Keeping raw UUID for now, could shorten for display
+        guest_name: d.guest?.full_name || "Unknown Guest",
+        host_name: d.host?.full_name || "Unknown Host",
+        reason: d.reason,
+        status: d.status,
+        priority: d.priority,
+        created_at: new Date(d.created_at),
+      }));
+    },
+  });
+
+  const filteredDisputes = disputes.filter((d: any) => {
     const matchesSearch = d.guest_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.id.toLowerCase().includes(searchQuery.toLowerCase());
@@ -87,7 +82,7 @@ const AdminDisputes = () => {
                 <AlertTriangle className="w-5 h-5 text-destructive" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{mockDisputes.filter(d => d.status === "open").length}</p>
+                <p className="text-2xl font-bold text-foreground">{disputes.filter((d: any) => d.status === "open").length}</p>
                 <p className="text-sm text-muted-foreground">Open</p>
               </div>
             </div>
@@ -98,7 +93,7 @@ const AdminDisputes = () => {
                 <Clock className="w-5 h-5 text-warning" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{mockDisputes.filter(d => d.status === "investigating").length}</p>
+                <p className="text-2xl font-bold text-foreground">{disputes.filter((d: any) => d.status === "investigating").length}</p>
                 <p className="text-sm text-muted-foreground">Investigating</p>
               </div>
             </div>
@@ -109,7 +104,7 @@ const AdminDisputes = () => {
                 <CheckCircle className="w-5 h-5 text-success" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{mockDisputes.filter(d => d.status === "resolved").length}</p>
+                <p className="text-2xl font-bold text-foreground">{disputes.filter((d: any) => d.status === "resolved").length}</p>
                 <p className="text-sm text-muted-foreground">Resolved</p>
               </div>
             </div>
@@ -120,7 +115,7 @@ const AdminDisputes = () => {
                 <MessageSquare className="w-5 h-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{mockDisputes.length}</p>
+                <p className="text-2xl font-bold text-foreground">{disputes.length}</p>
                 <p className="text-sm text-muted-foreground">Total</p>
               </div>
             </div>
@@ -167,21 +162,27 @@ const AdminDisputes = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredDisputes.length === 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                      Loading disputes...
+                    </td>
+                  </tr>
+                ) : filteredDisputes.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-muted-foreground">
                       No disputes found
                     </td>
                   </tr>
                 ) : (
-                  filteredDisputes.map((dispute) => {
+                  filteredDisputes.map((dispute: any) => {
                     const statusConfig = getStatusBadge(dispute.status);
                     return (
                       <tr key={dispute.id} className="border-b border-border last:border-0 hover:bg-muted/30">
                         <td className="p-4">
                           <div>
-                            <span className="font-mono text-sm font-medium">{dispute.id}</span>
-                            <p className="text-xs text-muted-foreground">Booking #{dispute.booking_id}</p>
+                            <span className="font-mono text-xs font-medium" title={dispute.id}>{dispute.id.slice(0, 8)}...</span>
+                            <p className="text-xs text-muted-foreground">Booking #{dispute.booking_id ? dispute.booking_id.slice(0, 8) : 'N/A'}</p>
                           </div>
                         </td>
                         <td className="p-4">
@@ -217,14 +218,13 @@ const AdminDisputes = () => {
 
         <div className="bg-muted/30 rounded-xl border border-border p-6 text-center">
           <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-          <h3 className="font-semibold text-foreground mb-1">Dispute System Coming Soon</h3>
+          <h3 className="font-semibold text-foreground mb-1">Dispute System Active</h3>
           <p className="text-sm text-muted-foreground">
-            Full dispute management with messaging and resolution tools will be available once the booking system is implemented.
+            Full dispute resolution tools will be available in detailed view.
           </p>
         </div>
       </div>
     </DashboardLayout>
   );
 };
-
 export default AdminDisputes;

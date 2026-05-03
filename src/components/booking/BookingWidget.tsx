@@ -1,21 +1,25 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { format, differenceInDays, addDays } from "date-fns";
+import { useNavigate, useLocation } from "react-router-dom";
+import { differenceInDays, addDays, format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { Calendar as CalendarIcon, ArrowLeft, Star, Loader2 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Star, Loader2, ArrowLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
 import GuestSelector from "./GuestSelector";
+import { bookingsService } from "@/services/bookings.service";
+import { authService } from "@/services/auth.service";
+import { paymentsService } from "@/services/payments.service";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BookingWidgetProps {
   propertyId: string;
@@ -24,6 +28,7 @@ interface BookingWidgetProps {
   maxGuests: number;
   rating?: number;
   className?: string;
+  category?: string; // Add category
 }
 
 const BookingWidget = ({
@@ -33,8 +38,11 @@ const BookingWidget = ({
   maxGuests,
   rating = 4.9,
   className,
+  category = "full_stay", // Default
 }: BookingWidgetProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  // ... (hooks) ...
   const { user } = useAuth();
   const [checkInDate, setCheckInDate] = useState<Date | undefined>();
   const [checkOutDate, setCheckOutDate] = useState<Date | undefined>();
@@ -43,8 +51,11 @@ const BookingWidget = ({
   const [showCheckout, setShowCheckout] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [unavailableDates, setUnavailableDates] = useState<Date[]>([]);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [isCheckInOpen, setIsCheckInOpen] = useState(false);
+  const [isCheckOutOpen, setIsCheckOutOpen] = useState(false);
 
-  // Fetch unavailable dates
+  // ... (useEffect for availability same as before) ...
   useEffect(() => {
     const fetchAvailability = async () => {
       const { data, error } = await supabase
@@ -61,19 +72,48 @@ const BookingWidget = ({
     fetchAvailability();
   }, [propertyId]);
 
-  const nights = checkInDate && checkOutDate 
-    ? differenceInDays(checkOutDate, checkInDate) 
+  // ... (useEffect for profile same as before) ...
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      try {
+        const data = await authService.getProfile(user.id);
+        if (data) {
+          setPhoneNumber(data.phone || "");
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchProfile();
+  }, [user]);
+
+  // Logic for duration
+  const isHourly = category === "hourly" || category === "vibe_chill";
+  const isDaily = category === "daycation";
+  const isNightly = category === "full_stay" || (!isHourly && !isDaily);
+
+  const diff = checkInDate && checkOutDate
+    ? (isHourly
+      ? Math.abs(checkOutDate.getTime() - checkInDate.getTime()) / 36e5 // Diff in hours
+      : differenceInDays(checkOutDate, checkInDate))
     : 0;
-  
-  const subtotal = pricePerNight * Math.max(nights, 1);
-  const serviceFee = Math.round(subtotal * 0.05);
-  const totalAmount = subtotal + serviceFee;
+
+  const units = Math.max(Math.ceil(diff), 1);
+  const unitLabel = isHourly ? "hour" : isDaily ? "day" : "night";
+  const unitsLabel = `${units} ${unitLabel}${units > 1 ? "s" : ""}`;
+
+  const nights = units; // variable alias for compatibility
+
+  const subtotal = pricePerNight * nights;
+  const serviceFee = 0;
+  const totalAmount = subtotal;
   const partialAmount = Math.round(totalAmount * 0.2);
   const remainingAmount = totalAmount - partialAmount;
 
   const isDateUnavailable = (date: Date) => {
     return unavailableDates.some(
-      (unavailable) => 
+      (unavailable) =>
         unavailable.getFullYear() === date.getFullYear() &&
         unavailable.getMonth() === date.getMonth() &&
         unavailable.getDate() === date.getDate()
@@ -83,7 +123,7 @@ const BookingWidget = ({
   const handleReserve = () => {
     if (!user) {
       toast.error("Please sign in to make a booking");
-      navigate("/auth");
+      navigate("/auth", { state: { from: location } });
       return;
     }
 
@@ -92,9 +132,18 @@ const BookingWidget = ({
       return;
     }
 
-    if (checkOutDate <= checkInDate) {
-      toast.error("Check-out date must be after check-in date");
-      return;
+    // Validation Logic
+    if (isNightly) {
+      if (checkOutDate <= checkInDate) {
+        toast.error("Check-out date must be after check-in date for full stays");
+        return;
+      }
+    } else {
+      // Hourly/Daycation: Allow same day (CheckOut >= CheckIn)
+      if (checkOutDate < checkInDate) {
+        toast.error("Check-out date cannot be before check-in date");
+        return;
+      }
     }
 
     setShowCheckout(true);
@@ -103,66 +152,65 @@ const BookingWidget = ({
   const handlePayment = async () => {
     if (!user || !checkInDate || !checkOutDate) return;
 
+    if (!phoneNumber.trim()) {
+      toast.error("Please enter your phone number");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const paymentAmount = paymentType === "full" ? totalAmount : partialAmount;
+      // Update phone number via service (keep profile update)
+      await authService.updateProfile(user.id, { phone: phoneNumber });
 
-      // Create booking in database
-      const { data: booking, error: bookingError } = await supabase
-        .from("bookings")
-        .insert({
-          property_id: propertyId,
-          user_id: user.id,
-          check_in_date: format(checkInDate, "yyyy-MM-dd"),
-          check_out_date: format(checkOutDate, "yyyy-MM-dd"),
-          guests,
-          total_amount: totalAmount,
-          paid_amount: 0,
-          payment_type: paymentType,
-          payment_status: "pending",
-          booking_status: "pending",
-        })
-        .select()
-        .single();
+      // Initiate Payment directly (No Booking creation first)
+      const response = await paymentsService.initiatePayment({
+        property_id: propertyId,
+        check_in_date: checkInDate,
+        check_out_date: checkOutDate,
+        guests: guests,
+        payment_type: paymentType,
+        success_url: `${window.location.origin}/payment/success`,
+        failure_url: `${window.location.origin}/payment/failure`
+      });
 
-      if (bookingError) throw bookingError;
+      if (response?.action_url) {
+        // Create form and submit to eSewa
+        const form = document.createElement("form");
+        form.setAttribute("method", "POST");
+        form.setAttribute("action", response.action_url);
 
-      // Call eSewa edge function
-      const { data: paymentData, error: paymentError } = await supabase.functions
-        .invoke("esewa-payment", {
-          body: {
-            bookingId: booking.id,
-            amount: paymentAmount,
-            productName: propertyName,
-            paymentType,
-          },
+        // Add all fields
+        const fields = [
+          'amount', 'tax_amount', 'total_amount', 'transaction_uuid',
+          'product_code', 'product_service_charge', 'product_delivery_charge',
+          'success_url', 'failure_url', 'signed_field_names', 'signature'
+        ];
+
+        fields.forEach(field => {
+          if (response[field] !== undefined) {
+            const hiddenField = document.createElement("input");
+            hiddenField.setAttribute("type", "hidden");
+            hiddenField.setAttribute("name", field);
+            hiddenField.setAttribute("value", response[field]);
+            form.appendChild(hiddenField);
+          }
         });
 
-      if (paymentError) throw paymentError;
+        document.body.appendChild(form);
+        form.submit();
 
-      if (paymentData?.paymentUrl) {
-        // Redirect to eSewa
-        window.location.href = paymentData.paymentUrl;
       } else {
-        // For demo, simulate success
-        toast.success("Booking created! Redirecting to payment...");
-        
-        // Update booking status
-        await supabase
-          .from("bookings")
-          .update({ 
-            booking_status: "confirmed",
-            payment_status: paymentType === "full" ? "paid" : "partial",
-            paid_amount: paymentAmount,
-          })
-          .eq("id", booking.id);
-
-        navigate("/dashboard/bookings");
+        // Fallback for demo/testing or if direct URL wasn't returned
+        toast.success("Payment initiated! Redirecting...");
+        if (response?.payment_url) {
+          window.location.href = response.payment_url;
+        }
       }
+
     } catch (error: any) {
-      console.error("Booking error:", error);
-      toast.error(error.message || "Failed to create booking");
+      console.error("Payment initiation error:", error);
+      toast.error(error.message || "Failed to initiate payment");
     } finally {
       setIsLoading(false);
     }
@@ -171,7 +219,7 @@ const BookingWidget = ({
   if (showCheckout) {
     return (
       <div className={cn("bg-card border border-border rounded-xl p-6 shadow-lg", className)}>
-        <button 
+        <button
           onClick={() => setShowCheckout(false)}
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
         >
@@ -180,16 +228,18 @@ const BookingWidget = ({
         </button>
 
         <h3 className="text-xl font-semibold mb-4">Payment Options</h3>
-        
-        <RadioGroup 
-          value={paymentType} 
-          onValueChange={(v) => setPaymentType(v as "full" | "partial")} 
+
+
+
+        <RadioGroup
+          value={paymentType}
+          onValueChange={(v) => setPaymentType(v as "full" | "partial")}
           className="space-y-3"
         >
           <div className={cn(
             "flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors",
-            paymentType === "full" 
-              ? "border-primary bg-primary/5" 
+            paymentType === "full"
+              ? "border-primary bg-primary/5"
               : "border-border hover:border-muted-foreground"
           )}>
             <RadioGroupItem value="full" id="full" className="mt-1" />
@@ -205,8 +255,8 @@ const BookingWidget = ({
 
           <div className={cn(
             "flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors",
-            paymentType === "partial" 
-              ? "border-primary bg-primary/5" 
+            paymentType === "partial"
+              ? "border-primary bg-primary/5"
               : "border-border hover:border-muted-foreground"
           )}>
             <RadioGroupItem value="partial" id="partial" className="mt-1" />
@@ -241,9 +291,23 @@ const BookingWidget = ({
           </div>
         </div>
 
+        <div className="mb-6">
+          <Label htmlFor="phone" className="mb-2 block">Phone Number *</Label>
+          <Input
+            id="phone"
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
+            placeholder="Enter your phone number"
+            required
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            This will be shared with the host for coordination.
+          </p>
+        </div>
+
         {/* eSewa Payment Button */}
         <div className="mt-6">
-          <Button 
+          <Button
             className="w-full bg-[#60BB46] hover:bg-[#4fa03a] text-white"
             size="lg"
             onClick={handlePayment}
@@ -252,9 +316,9 @@ const BookingWidget = ({
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin mr-2" />
             ) : (
-              <img 
-                src="https://esewa.com.np/common/images/esewa_logo.png" 
-                alt="eSewa" 
+              <img
+                src="https://esewa.com.np/common/images/esewa_logo.png"
+                alt="eSewa"
                 className="h-5 mr-2 brightness-0 invert"
                 onError={(e) => e.currentTarget.style.display = 'none'}
               />
@@ -274,7 +338,7 @@ const BookingWidget = ({
       <div className="flex items-baseline justify-between mb-4">
         <div>
           <span className="text-2xl font-bold">NPR {pricePerNight.toLocaleString()}</span>
-          <span className="text-muted-foreground"> /night</span>
+          <span className="text-muted-foreground"> /{unitLabel}</span>
         </div>
         <div className="flex items-center gap-1">
           <Star className="w-4 h-4 text-primary fill-primary" />
@@ -284,10 +348,12 @@ const BookingWidget = ({
 
       <div className="space-y-4">
         {/* Date Selection */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Check-in</label>
-            <Popover>
+        <div className="grid grid-cols-2 gap-4">
+          <div className={`space-y-2 ${!isNightly ? "col-span-2" : ""}`}>
+            <label className="text-sm font-medium">
+              {isNightly ? "Check-in" : "Date"}
+            </label>
+            <Popover open={isCheckInOpen} onOpenChange={setIsCheckInOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -297,7 +363,7 @@ const BookingWidget = ({
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {checkInDate ? format(checkInDate, "MMM d") : "Select"}
+                  {checkInDate ? format(checkInDate, "MMM d") : "Select Date"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -306,11 +372,17 @@ const BookingWidget = ({
                   selected={checkInDate}
                   onSelect={(date) => {
                     setCheckInDate(date);
-                    if (date && (!checkOutDate || checkOutDate <= date)) {
+                    if (!isNightly && date) {
+                      setCheckOutDate(date);
+                      setIsCheckInOpen(false); // Auto-close
+                    } else if (isNightly && date && (!checkOutDate || checkOutDate <= date)) {
                       setCheckOutDate(addDays(date, 1));
+                      setIsCheckInOpen(false);
+                    } else {
+                      setIsCheckInOpen(false);
                     }
                   }}
-                  disabled={(date) => 
+                  disabled={(date) =>
                     date < new Date() || isDateUnavailable(date)
                   }
                   initialFocus
@@ -320,37 +392,40 @@ const BookingWidget = ({
             </Popover>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Check-out</label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !checkOutDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {checkOutDate ? format(checkOutDate, "MMM d") : "Select"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={checkOutDate}
-                  onSelect={setCheckOutDate}
-                  disabled={(date) => 
-                    date < new Date() || 
-                    (checkInDate && date <= checkInDate) ||
-                    isDateUnavailable(date)
-                  }
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
+          {isNightly && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Check-out</label>
+              <Popover open={isCheckOutOpen} onOpenChange={setIsCheckOutOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !checkOutDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {checkOutDate ? format(checkOutDate, "MMM d") : "Select Date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={checkOutDate}
+                    onSelect={(date) => {
+                      setCheckOutDate(date);
+                      setIsCheckOutOpen(false); // Auto-close
+                    }}
+                    disabled={(date) =>
+                      date < (checkInDate || new Date()) || isDateUnavailable(date)
+                    }
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
         </div>
 
         {/* Guest Selector */}
@@ -374,7 +449,7 @@ const BookingWidget = ({
         <div className="mt-6 pt-6 border-t border-border space-y-3">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">
-              NPR {pricePerNight.toLocaleString()} × {nights} night{nights > 1 ? "s" : ""}
+              NPR {pricePerNight.toLocaleString()} × {unitsLabel}
             </span>
             <span>NPR {subtotal.toLocaleString()}</span>
           </div>

@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { User, CalendarCheck, Settings, Activity, LogOut, ArrowRightLeft, Shield } from "lucide-react";
+import { User, CalendarCheck, LogOut, ArrowRightLeft, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -18,12 +18,22 @@ const navLinks = [
   { name: "Vibe & Chill", path: "/properties?type=vibe", type: "vibe" },
 ];
 
+const hostNavLinks = [
+  { name: "Overview", path: "/host", exact: true },
+  { name: "Properties", path: "/host/properties" },
+  { name: "Bookings", path: "/host/bookings" },
+  { name: "Calendar", path: "/host/calendar" },
+  { name: "Earnings", path: "/host/earnings" },
+];
+
 const Navbar = () => {
   const { user, signOut, roles, requestHostRole } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isHost = roles.includes("host");
   const isAdmin = roles.includes("admin");
+  const isHostMode = location.pathname.startsWith("/host");
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
@@ -33,20 +43,24 @@ const Navbar = () => {
     if (isHost) {
       navigate("/host");
     } else {
-      // Request host role
-      const { error } = await requestHostRole();
-      if (error) {
-        toast.error("Failed to become a host. Please try again.");
-      } else {
-        toast.success("You are now a host!");
-        navigate("/host");
-      }
+      // Navigate to intermediate page for first-time hosts
+      navigate("/become-host");
     }
   };
 
-  const isActive = (type: string) => {
-    const searchParams = new URLSearchParams(location.search);
-    return location.pathname === "/properties" && searchParams.get("type") === type;
+  const handleSwitchToGuest = () => {
+    navigate("/");
+  };
+
+  const isActive = (path: string, type?: string, exact = false) => {
+    if (type) {
+      const searchParams = new URLSearchParams(location.search);
+      return location.pathname === "/properties" && searchParams.get("type") === type;
+    }
+    if (exact) {
+      return location.pathname === path;
+    }
+    return location.pathname.startsWith(path);
   };
 
   return (
@@ -54,32 +68,55 @@ const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
+          <Link to={isHostMode ? "/host" : "/"} className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
               <span className="text-xl font-bold text-primary-foreground">H</span>
             </div>
             <span className="text-xl font-bold text-foreground">Humbri</span>
+            {isHostMode && <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium ml-1">HOST</span>}
           </Link>
 
           {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center gap-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={cn(
-                  "text-sm font-medium transition-colors relative py-1",
-                  isActive(link.type) 
-                    ? "text-primary" 
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {link.name}
-                {isActive(link.type) && (
-                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
-                )}
-              </Link>
-            ))}
+            {isHostMode ? (
+              // Host Navigation
+              hostNavLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={cn(
+                    "text-sm font-medium transition-colors relative py-1",
+                    isActive(link.path, undefined, link.exact)
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {link.name}
+                  {isActive(link.path, undefined, link.exact) && (
+                    <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                  )}
+                </Link>
+              ))
+            ) : (
+              // Guest Navigation
+              navLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={cn(
+                    "text-sm font-medium transition-colors relative py-1",
+                    isActive(link.path, link.type)
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {link.name}
+                  {isActive(link.path, link.type) && (
+                    <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                  )}
+                </Link>
+              ))
+            )}
           </div>
 
           {/* Profile Button / Auth */}
@@ -87,8 +124,12 @@ const Navbar = () => {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="w-10 h-10 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center hover:bg-primary/20 transition-colors">
-                    <User className="w-5 h-5 text-primary" />
+                  <button className="w-10 h-10 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center hover:bg-primary/20 transition-colors overflow-hidden">
+                    {user?.user_metadata?.avatar_url ? (
+                      <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-5 h-5 text-primary" />
+                    )}
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52 bg-card border border-border shadow-xl z-[100]">
@@ -104,18 +145,7 @@ const Navbar = () => {
                       <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/dashboard/settings" className="flex items-center gap-3 cursor-pointer py-2.5">
-                      <Settings className="w-4 h-4 text-primary" />
-                      <span>Settings</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/dashboard" className="flex items-center gap-3 cursor-pointer py-2.5">
-                      <Activity className="w-4 h-4 text-primary" />
-                      <span>Activities</span>
-                    </Link>
-                  </DropdownMenuItem>
+
                   <DropdownMenuSeparator />
                   {isAdmin && (
                     <DropdownMenuItem asChild>
@@ -125,15 +155,27 @@ const Navbar = () => {
                       </Link>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem 
-                    onClick={handleSwitchToHost}
-                    className="flex items-center gap-3 cursor-pointer py-2.5 text-accent"
-                  >
-                    <ArrowRightLeft className="w-4 h-4" />
-                    <span>{isHost ? "Switch to Host" : "Become a Host"}</span>
-                  </DropdownMenuItem>
+
+                  {isHostMode ? (
+                    <DropdownMenuItem
+                      onClick={handleSwitchToGuest}
+                      className="flex items-center gap-3 cursor-pointer py-2.5 text-accent"
+                    >
+                      <ArrowRightLeft className="w-4 h-4" />
+                      <span>Switch to Guest</span>
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem
+                      onClick={handleSwitchToHost}
+                      className="flex items-center gap-3 cursor-pointer py-2.5 text-accent"
+                    >
+                      <ArrowRightLeft className="w-4 h-4" />
+                      <span>{isHost ? "Switch to Host" : "Become a Host"}</span>
+                    </DropdownMenuItem>
+                  )}
+
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={handleSignOut}
                     className="flex items-center gap-3 cursor-pointer py-2.5 text-destructive focus:text-destructive"
                   >

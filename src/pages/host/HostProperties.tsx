@@ -103,17 +103,16 @@ const HostProperties = () => {
                         <h3 className="text-lg font-semibold text-card-foreground">{property.name}</h3>
                         <p className="text-sm text-muted-foreground">{property.location}</p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        property.status === "active" 
-                          ? "bg-success/10 text-success" 
-                          : property.status === "pending"
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${property.status === "active"
+                        ? "bg-success/10 text-success"
+                        : property.status === "pending"
                           ? "bg-warning/10 text-warning"
                           : "bg-muted text-muted-foreground"
-                      }`}>
+                        }`}>
                         {property.status}
                       </span>
                     </div>
-                    
+
                     <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground">Category</p>
@@ -135,24 +134,30 @@ const HostProperties = () => {
                           </div>
                         </>
                       )}
+                      <div>
+                        <p className="text-muted-foreground">Capacity</p>
+                        <p className="font-semibold text-card-foreground">
+                          {property.max_guests || 1} Guests • {property.beds || 1} Beds
+                        </p>
+                      </div>
                     </div>
-                    
+
                     <div className="mt-4 flex items-center gap-2 flex-wrap">
-                      <Link to={`/host/properties/${property.id}`}>
+                      <Link to={`/property/${property.id}`}>
                         <Button size="sm" variant="outline">
                           <Eye className="w-3 h-3 mr-1" />
                           View
                         </Button>
                       </Link>
-                      <Link to={`/host/properties/${property.id}/edit`}>
+                      <Link to={`/host/properties/edit/${property.id}`}>
                         <Button size="sm" variant="outline">
                           <Edit className="w-3 h-3 mr-1" />
                           Edit
                         </Button>
                       </Link>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         className="text-destructive hover:bg-destructive/10"
                         onClick={() => {
                           if (confirm("Are you sure you want to delete this property?")) {

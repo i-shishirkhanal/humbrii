@@ -5,54 +5,36 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Activity, User, Building2, Shield, Settings, FileText, Clock } from "lucide-react";
 import { format } from "date-fns";
-
-// Mock data
-const mockLogs = [
-  {
-    id: "1",
-    action: "property.approved",
-    actor: "Admin User",
-    target: "Himalayan View Resort",
-    timestamp: new Date("2024-01-15T10:30:00"),
-    details: "Property approved and published",
-  },
-  {
-    id: "2",
-    action: "user.role_changed",
-    actor: "Admin User",
-    target: "John Doe",
-    timestamp: new Date("2024-01-15T09:15:00"),
-    details: "Added host role",
-  },
-  {
-    id: "3",
-    action: "property.suspended",
-    actor: "Admin User",
-    target: "City Center Express",
-    timestamp: new Date("2024-01-14T16:45:00"),
-    details: "Suspended due to policy violation",
-  },
-  {
-    id: "4",
-    action: "settings.updated",
-    actor: "Admin User",
-    target: "Platform Settings",
-    timestamp: new Date("2024-01-14T14:20:00"),
-    details: "Updated commission rate",
-  },
-  {
-    id: "5",
-    action: "user.created",
-    actor: "System",
-    target: "Jane Smith",
-    timestamp: new Date("2024-01-14T11:00:00"),
-    details: "New user registered",
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminAuditLogs = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "property" | "user" | "settings" | "system">("all");
+
+  const { data: logs = [], isLoading } = useQuery({
+    queryKey: ["admin-audit-logs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("audit_logs")
+        .select(`
+          *,
+          profiles (full_name)
+        `)
+        .order("timestamp", { ascending: false });
+
+      if (error) throw error;
+
+      return data.map((log: any) => ({
+        id: log.id,
+        action: log.action,
+        actor: log.profiles?.full_name || "Unknown User",
+        target: log.target || "N/A",
+        timestamp: new Date(log.timestamp),
+        details: log.details || "",
+      }));
+    },
+  });
 
   const getActionType = (action: string): "property" | "user" | "settings" | "system" => {
     if (action.startsWith("property")) return "property";
@@ -61,7 +43,7 @@ const AdminAuditLogs = () => {
     return "system";
   };
 
-  const filteredLogs = mockLogs.filter(log => {
+  const filteredLogs = logs.filter((log: any) => {
     const matchesSearch = log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.actor.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.target.toLowerCase().includes(searchQuery.toLowerCase());
@@ -103,7 +85,7 @@ const AdminAuditLogs = () => {
                 <Activity className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{mockLogs.length}</p>
+                <p className="text-2xl font-bold text-foreground">{logs.length}</p>
                 <p className="text-sm text-muted-foreground">Total Actions</p>
               </div>
             </div>
@@ -114,7 +96,7 @@ const AdminAuditLogs = () => {
                 <Building2 className="w-5 h-5 text-success" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{mockLogs.filter(l => getActionType(l.action) === "property").length}</p>
+                <p className="text-2xl font-bold text-foreground">{logs.filter((l: any) => getActionType(l.action) === "property").length}</p>
                 <p className="text-sm text-muted-foreground">Property Actions</p>
               </div>
             </div>
@@ -125,7 +107,7 @@ const AdminAuditLogs = () => {
                 <User className="w-5 h-5 text-accent" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{mockLogs.filter(l => getActionType(l.action) === "user").length}</p>
+                <p className="text-2xl font-bold text-foreground">{logs.filter((l: any) => getActionType(l.action) === "user").length}</p>
                 <p className="text-sm text-muted-foreground">User Actions</p>
               </div>
             </div>
@@ -171,12 +153,16 @@ const AdminAuditLogs = () => {
         {/* Logs Timeline */}
         <div className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="divide-y divide-border">
-            {filteredLogs.length === 0 ? (
+            {isLoading ? (
+              <div className="p-8 text-center text-muted-foreground">
+                Loading logs...
+              </div>
+            ) : filteredLogs.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">
                 No logs found
               </div>
             ) : (
-              filteredLogs.map((log) => {
+              filteredLogs.map((log: any) => {
                 const Icon = getActionIcon(log.action);
                 return (
                   <div key={log.id} className="p-4 hover:bg-muted/30 transition-colors">
@@ -210,9 +196,9 @@ const AdminAuditLogs = () => {
 
         <div className="bg-muted/30 rounded-xl border border-border p-6 text-center">
           <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-          <h3 className="font-semibold text-foreground mb-1">Full Audit System Coming Soon</h3>
+          <h3 className="font-semibold text-foreground mb-1">Full Audit Logging Active</h3>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Complete audit logging with database triggers will track all administrative actions automatically.
+            Audit logs are tracking key administrative actions.
           </p>
         </div>
       </div>

@@ -30,6 +30,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getOptimizedImageUrl } from "@/lib/image-utils";
 
 // Amenity icon mapping
 const amenityIcons: Record<string, any> = {
@@ -48,39 +49,7 @@ const amenityIcons: Record<string, any> = {
 };
 
 // Sample property data fallback
-const samplePropertyData = {
-  id: "1",
-  name: "Himalayan View Resort",
-  location: "Pokhara, Nepal",
-  images: [
-    "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=1920&q=90&fit=crop",
-    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1920&q=90&fit=crop",
-    "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1920&q=90&fit=crop",
-    "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1920&q=90&fit=crop",
-  ],
-  rating: 4.9,
-  reviews: 128,
-  base_price: 8500,
-  maxGuests: 4,
-  bedrooms: 2,
-  bathrooms: 2,
-  category: "full_stay",
-  description: "Experience the breathtaking beauty of the Himalayas from this luxurious resort. Nestled in the heart of Pokhara, our resort offers stunning mountain views, world-class amenities, and exceptional service.",
-  amenities: ["Free WiFi", "Free Parking", "Restaurant", "Smart TV", "Air Conditioning", "Private Bath"],
-  host: {
-    name: "Ram Sharma",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80",
-    joinedDate: "2020",
-    responseRate: "98%",
-  },
-  policies: [
-    "Check-in: 2:00 PM - 10:00 PM",
-    "Checkout: 11:00 AM",
-    "No smoking",
-    "No parties or events",
-    "Pets allowed",
-  ],
-};
+
 
 const PropertyDetail = () => {
   const { id } = useParams();
@@ -88,17 +57,24 @@ const PropertyDetail = () => {
   const [currentImage, setCurrentImage] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
 
-  // Fetch property from database
-  const { data: dbProperty, isLoading } = useQuery({
+  // Fetch property from database with host details
+  const { data: property, isLoading } = useQuery({
     queryKey: ["property", id],
     queryFn: async () => {
       if (!id) return null;
       const { data, error } = await supabase
         .from("properties")
-        .select("*")
+        .select(`
+          *,
+          host:profiles(
+            full_name,
+            avatar_url,
+            created_at
+          )
+        `)
         .eq("id", id)
         .single();
-      
+
       if (error) {
         console.error("Error fetching property:", error);
         return null;
@@ -108,35 +84,27 @@ const PropertyDetail = () => {
     enabled: !!id,
   });
 
-  // Use database property or fallback to sample
-  const property = dbProperty ? {
-    ...samplePropertyData,
-    id: dbProperty.id,
-    name: dbProperty.name,
-    location: dbProperty.location,
-    images: dbProperty.images?.length ? dbProperty.images : samplePropertyData.images,
-    base_price: dbProperty.base_price,
-    category: dbProperty.category,
-    description: dbProperty.description || samplePropertyData.description,
-    amenities: dbProperty.amenities?.length ? dbProperty.amenities : samplePropertyData.amenities,
-  } : samplePropertyData;
-
   // Check if property is in favorites
   useEffect(() => {
+    if (!property) return;
     const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
     setIsFavorite(favorites.includes(property.id));
-  }, [property.id]);
+  }, [property?.id]);
 
   const nextImage = () => {
-    setCurrentImage((prev) => (prev + 1) % property.images.length);
+    if (!property?.images) return;
+    setCurrentImage((prev) => (prev + 1) % property.images!.length);
   };
 
   const prevImage = () => {
-    setCurrentImage((prev) => (prev - 1 + property.images.length) % property.images.length);
+    if (!property?.images) return;
+    setCurrentImage((prev) => (prev - 1 + property.images!.length) % property.images!.length);
   };
 
   const toggleFavorite = () => {
+    if (!property) return;
     const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+    // ... rest matches existing logic but using property directly
     if (!isFavorite) {
       favorites.push(property.id);
       toast.success("Added to favorites");
@@ -175,15 +143,15 @@ const PropertyDetail = () => {
       <main className="container mx-auto px-4 py-6 pt-20 md:pt-24">
         {/* Image Gallery */}
         <div className="relative rounded-xl overflow-hidden mb-6">
-          <div className="aspect-[16/9] md:aspect-[21/9]">
+          <div className="aspect-video md:aspect-[16/9]">
             <img
-              src={`${property.images[currentImage]}${property.images[currentImage].includes('unsplash') ? '&w=1920&q=90&fit=crop' : ''}`}
+              src={getOptimizedImageUrl(property.images?.[currentImage])}
               alt={property.name}
               className="w-full h-full object-cover object-center"
               loading="eager"
             />
           </div>
-          
+
           {/* Navigation Arrows */}
           <button
             onClick={prevImage}
@@ -200,7 +168,7 @@ const PropertyDetail = () => {
 
           {/* Image Indicators */}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-            {property.images.map((_, idx) => (
+            {(property.images || []).map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentImage(idx)}
@@ -218,8 +186,8 @@ const PropertyDetail = () => {
               onClick={toggleFavorite}
               className={cn(
                 "w-10 h-10 rounded-full flex items-center justify-center transition-colors shadow-lg",
-                isFavorite 
-                  ? "bg-primary text-primary-foreground" 
+                isFavorite
+                  ? "bg-primary text-primary-foreground"
                   : "bg-background/90 backdrop-blur-sm hover:bg-background"
               )}
             >
@@ -247,103 +215,108 @@ const PropertyDetail = () => {
               <div className="flex items-center gap-4 mt-2">
                 <div className="flex items-center gap-1 text-muted-foreground">
                   <MapPin className="w-4 h-4" />
-                  <span>{property.location}</span>
+                  <span>{property.location || property.address || "Location unavailable"}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 text-primary fill-primary" />
                   <span className="font-semibold">{property.rating}</span>
-                  <span className="text-muted-foreground">({property.reviews} reviews)</span>
                 </div>
               </div>
             </div>
 
             {/* Quick Stats */}
-            <div className="flex items-center gap-6 p-4 bg-muted/50 rounded-xl">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-muted-foreground" />
-                <span>{property.maxGuests} guests</span>
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center gap-2.5 px-4 py-2 bg-primary/5 border border-primary/10 rounded-full text-sm font-medium text-foreground">
+                <Users className="w-4 h-4 text-primary" />
+                <span>{property.max_guests ?? 2} guests</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Bed className="w-5 h-5 text-muted-foreground" />
-                <span>{property.bedrooms} bedrooms</span>
+              <div className="flex items-center gap-2.5 px-4 py-2 bg-primary/5 border border-primary/10 rounded-full text-sm font-medium text-foreground">
+                <Bed className="w-4 h-4 text-primary" />
+                <span>{property.bedrooms ?? 1} bedrooms</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Bath className="w-5 h-5 text-muted-foreground" />
-                <span>{property.bathrooms} bathrooms</span>
+              <div className="flex items-center gap-2.5 px-4 py-2 bg-primary/5 border border-primary/10 rounded-full text-sm font-medium text-foreground">
+                <Bath className="w-4 h-4 text-primary" />
+                <span>{property.bathrooms ?? 1} bathrooms</span>
               </div>
             </div>
 
             {/* Description */}
             <div>
               <h2 className="text-xl font-semibold mb-3">About this place</h2>
-              <p className="text-muted-foreground leading-relaxed">{property.description}</p>
+              <p className="text-muted-foreground leading-relaxed text-sm md:text-base">
+                {property.description || "No description provided."}
+              </p>
             </div>
 
             {/* Amenities */}
             <div>
-              <h2 className="text-xl font-semibold mb-3">What this place offers</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {property.amenities.map((amenity, idx) => {
-                  const IconComponent = amenityIcons[amenity] || Wifi;
-                  return (
-                    <div key={idx} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                      <IconComponent className="w-5 h-5 text-primary" />
-                      <span>{amenity}</span>
-                    </div>
-                  );
-                })}
-              </div>
+              <h2 className="text-xl font-semibold mb-4">What this place offers</h2>
+              {(!property.amenities || property.amenities.length === 0) ? (
+                <p className="text-muted-foreground text-sm">No specific amenities listed.</p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                  {property.amenities.map((amenity, idx) => {
+                    const IconComponent = amenityIcons[amenity] || Wifi;
+                    return (
+                      <div key={idx} className="flex items-center gap-3 p-3.5 border border-border rounded-xl hover:border-primary/50 hover:bg-muted/30 transition-colors group">
+                        <IconComponent className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span className="text-sm font-medium">{amenity}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Host Info */}
-            <div className="p-4 bg-card border border-border rounded-xl">
-              <h2 className="text-xl font-semibold mb-3">Hosted by {property.host.name}</h2>
-              <div className="flex items-center gap-4">
-                <img
-                  src={property.host.image}
-                  alt={property.host.name}
-                  className="w-16 h-16 rounded-full object-cover"
-                />
-                <div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4" />
-                    <span>Joined in {property.host.joinedDate}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                    <Shield className="w-4 h-4" />
-                    <span>{property.host.responseRate} response rate</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+
 
             {/* Policies */}
             <div>
               <h2 className="text-xl font-semibold mb-3">House rules</h2>
-              <ul className="space-y-2">
-                {property.policies.map((policy, idx) => (
-                  <li key={idx} className="flex items-center gap-2 text-muted-foreground">
-                    <Check className="w-4 h-4 text-success" />
-                    {policy}
-                  </li>
-                ))}
-              </ul>
+              <div className="mb-4 space-y-1 text-sm text-muted-foreground">
+                <div className="flex justify-between max-w-xs">
+                  <span>Check-in:</span>
+                  <span className="font-medium text-foreground">{property.check_in_time || "Flexible"}</span>
+                </div>
+                <div className="flex justify-between max-w-xs">
+                  <span>Checkout:</span>
+                  <span className="font-medium text-foreground">{property.check_out_time || "Flexible"}</span>
+                </div>
+              </div>
+              {(!property.house_rules || property.house_rules.length === 0) ? (
+                <p className="text-sm text-muted-foreground italic">No specific house rules listed.</p>
+              ) : (
+                <ul className="grid sm:grid-cols-2 gap-3">
+                  {property.house_rules.map((policy, idx) => (
+                    <li key={idx} className="flex items-center gap-2.5 text-muted-foreground text-sm">
+                      <Check className="w-4 h-4 text-primary" />
+                      {policy}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* Location Map */}
             <div>
-              <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
-                <Map className="w-5 h-5 text-primary" />
-                Location
-              </h2>
-              <p className="text-muted-foreground mb-3 flex items-center gap-1">
-                <MapPin className="w-4 h-4" />
-                {property.location}
-              </p>
-              <PropertyMap 
-                location={property.location} 
-                propertyName={property.name} 
-              />
+              <div className="mb-4">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  Where you'll be
+                </h2>
+                <p className="text-muted-foreground text-sm mt-1 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" />
+                  {property.location || property.address || "Location view"}
+                </p>
+              </div>
+              <div className="rounded-2xl overflow-hidden border border-border shadow-lg h-[400px]">
+                <PropertyMap
+                  location={property.location || property.address || ""}
+                  propertyName={property.name}
+                  latitude={property.latitude}
+                  longitude={property.longitude}
+                />
+              </div>
             </div>
           </div>
 
@@ -353,9 +326,10 @@ const PropertyDetail = () => {
               <BookingWidget
                 propertyId={property.id}
                 propertyName={property.name}
-                pricePerNight={property.base_price}
-                maxGuests={property.maxGuests}
-                rating={property.rating}
+                pricePerNight={property.base_price || 0}
+                maxGuests={property.max_guests ?? 2}
+                rating={property.rating || 4.5}
+                category={property.category} // Pass category
               />
             </div>
           </div>

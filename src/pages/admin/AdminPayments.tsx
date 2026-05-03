@@ -1,5 +1,7 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -7,95 +9,74 @@ import { Search, DollarSign, CreditCard, TrendingUp, ArrowUpRight, ArrowDownRigh
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 
-// Mock data with payment details
-const mockPayments = [
-  {
-    id: "PAY001",
-    booking_id: "BK001",
-    property_name: "Himalayan View Resort",
-    guest_name: "Ram Sharma",
-    total_amount: 25500,
-    paid_amount: 25500,
-    remaining_amount: 0,
-    payment_type: "full",
-    status: "completed",
-    method: "eSewa",
-    created_at: new Date("2024-01-10"),
-    type: "booking",
-  },
-  {
-    id: "PAY002",
-    booking_id: "BK002",
-    property_name: "Lakeside Paradise Villa",
-    guest_name: "Jane Smith",
-    total_amount: 16000,
-    paid_amount: 8000,
-    remaining_amount: 8000,
-    payment_type: "partial",
-    status: "pending",
-    method: "Khalti",
-    created_at: new Date("2024-01-12"),
-    type: "booking",
-  },
-  {
-    id: "PAY003",
-    booking_id: "BK003",
-    property_name: "City Center Express",
-    guest_name: "Mike Johnson",
-    total_amount: 12000,
-    paid_amount: 3000,
-    remaining_amount: 9000,
-    payment_type: "partial",
-    status: "partially_paid",
-    method: "Bank Transfer",
-    created_at: new Date("2024-01-08"),
-    type: "booking",
-  },
-  {
-    id: "PAY004",
-    booking_id: null,
-    property_name: null,
-    guest_name: null,
-    total_amount: 20000,
-    paid_amount: 20000,
-    remaining_amount: 0,
-    payment_type: "payout",
-    status: "completed",
-    method: "Bank Transfer",
-    created_at: new Date("2024-01-08"),
-    type: "payout",
-  },
-];
-
 const AdminPayments = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "booking" | "payout" | "refund">("all");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "full" | "partial" | "pending">("all");
 
-  const filteredPayments = mockPayments.filter(p => {
+  /* Fetch live bookings to simulate payments */
+  const { data: bookings = [], isLoading } = useQuery({
+    queryKey: ["admin-payments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("*, profiles(full_name), properties(name)")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const getPaidAmount = (booking: any) => {
+    if (booking.payment_status === "paid") return booking.total_amount;
+    if (booking.payment_status === "partial") return Math.round(booking.total_amount * 0.2); // Assuming 20% down payment
+    return 0;
+  };
+
+  const processedPayments = bookings.map((booking: any) => {
+    const paid = getPaidAmount(booking);
+    return {
+      id: booking.id,
+      booking_id: booking.id,
+      property_name: booking.properties?.name || "Unknown Property",
+      guest_name: booking.profiles?.full_name || "Guest",
+      total_amount: booking.total_amount,
+      paid_amount: paid,
+      remaining_amount: booking.total_amount - paid,
+      payment_type: booking.payment_status || "pending",
+      status: booking.status,
+      method: "eSewa", // Defaulting as placeholder
+      created_at: new Date(booking.created_at),
+      type: "booking",
+    };
+  });
+
+  const filteredPayments = processedPayments.filter((p: any) => {
     const matchesSearch = p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.guest_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
-      (p.property_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-    const matchesType = typeFilter === "all" || p.type === typeFilter;
-    const matchesPayment = paymentFilter === "all" || 
-      (paymentFilter === "full" && p.payment_type === "full") ||
-      (paymentFilter === "partial" && (p.payment_type === "partial" || p.status === "partially_paid")) ||
-      (paymentFilter === "pending" && p.status === "pending");
+      (p.guest_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (p.property_name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchesType = typeFilter === "all" || typeFilter === "booking";
+
+    const matchesPayment = paymentFilter === "all" ||
+      (paymentFilter === "full" && p.payment_type === "paid") ||
+      (paymentFilter === "partial" && p.payment_type === "partial") ||
+      (paymentFilter === "pending" && (p.payment_type === "pending" || p.payment_type === "unpaid")); // 'unpaid' not in enum but handled just in case
+
     return matchesSearch && matchesType && matchesPayment;
   });
 
-  const totalRevenue = mockPayments.filter(p => p.type === "booking").reduce((acc, p) => acc + p.paid_amount, 0);
-  const totalPayouts = mockPayments.filter(p => p.type === "payout" && p.status === "completed").reduce((acc, p) => acc + p.paid_amount, 0);
-  const pendingPayments = mockPayments.filter(p => p.remaining_amount > 0).reduce((acc, p) => acc + p.remaining_amount, 0);
-  const fullPayments = mockPayments.filter(p => p.type === "booking" && p.payment_type === "full").length;
-  const partialPayments = mockPayments.filter(p => p.type === "booking" && p.payment_type === "partial").length;
+  const totalRevenue = processedPayments.reduce((acc: number, p: any) => acc + p.paid_amount, 0);
+  const totalPayouts = 0; // No payouts table yet
+  const pendingPayments = processedPayments.reduce((acc: number, p: any) => acc + p.remaining_amount, 0);
+  const fullPayments = processedPayments.filter((p: any) => p.payment_type === "paid").length;
+  const partialPayments = processedPayments.filter((p: any) => p.payment_type === "partial").length;
 
-  const getPaymentBadge = (payment: typeof mockPayments[0]) => {
-    if (payment.type === "payout") return null;
-    
-    if (payment.payment_type === "full" && payment.status === "completed") {
+  const getPaymentBadge = (payment: any) => {
+    if (payment.payment_type === "paid") {
       return <Badge className="bg-success/10 text-success border-success/20">Full Payment</Badge>;
-    } else if (payment.remaining_amount > 0) {
+    } else if (payment.remaining_amount > 0 && payment.paid_amount > 0) {
       return <Badge className="bg-warning/10 text-warning border-warning/20">Partial ({Math.round((payment.paid_amount / payment.total_amount) * 100)}%)</Badge>;
     }
     return <Badge variant="secondary">Pending</Badge>;
@@ -274,8 +255,8 @@ const AdminPayments = () => {
                       <td className="p-4 min-w-[120px]">
                         {payment.type === "booking" && (
                           <div className="space-y-1">
-                            <Progress 
-                              value={(payment.paid_amount / payment.total_amount) * 100} 
+                            <Progress
+                              value={(payment.paid_amount / payment.total_amount) * 100}
                               className="h-2"
                             />
                             <span className="text-xs text-muted-foreground">

@@ -40,7 +40,7 @@ const AdminHosts = () => {
         .from("user_roles")
         .select("*")
         .eq("role", "host");
-      
+
       if (error) throw error;
       return data;
     },
@@ -55,8 +55,8 @@ const AdminHosts = () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .in("user_id", hostIds);
-      
+        .in("id", hostIds);
+
       if (error) throw error;
       return data;
     },
@@ -73,7 +73,7 @@ const AdminHosts = () => {
         .from("properties")
         .select("*")
         .in("host_id", hostIds);
-      
+
       if (error) throw error;
       return data;
     },
@@ -87,7 +87,7 @@ const AdminHosts = () => {
         .delete()
         .eq("user_id", userId)
         .eq("role", "host");
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -111,13 +111,13 @@ const AdminHosts = () => {
   };
 
   const getProfile = (userId: string) => {
-    return profiles?.find(p => p.user_id === userId);
+    return profiles?.find(p => p.id === userId);
   };
 
   const filteredHosts = hostRoles?.filter(h => {
     const profile = getProfile(h.user_id);
     return profile?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           profile?.phone?.includes(searchQuery);
+      profile?.phone?.includes(searchQuery);
   });
 
   const totalProperties = properties?.length || 0;
@@ -222,7 +222,7 @@ const AdminHosts = () => {
                   filteredHosts?.map((hostRole) => {
                     const profile = getProfile(hostRole.user_id);
                     const stats = getPropertyStats(hostRole.user_id);
-                    
+
                     return (
                       <tr key={hostRole.id} className="border-b border-border last:border-0 hover:bg-muted/30">
                         <td className="p-4">
@@ -277,7 +277,7 @@ const AdminHosts = () => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
                               <DropdownMenuItem asChild>
-                                <Link 
+                                <Link
                                   to={`/admin/properties?host=${hostRole.user_id}`}
                                   className="flex items-center"
                                 >
@@ -286,7 +286,7 @@ const AdminHosts = () => {
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={() => setRemoveHostDialog(hostRole.user_id)}
                                 className="text-destructive"
                               >
@@ -317,7 +317,7 @@ const AdminHosts = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => removeHostDialog && removeHostMutation.mutate(removeHostDialog)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

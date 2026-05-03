@@ -1,5 +1,7 @@
 import { useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -52,11 +54,16 @@ const whoWeServe = [
 interface PropertyData {
   id: string;
   name: string;
-  location: string;
+  address: string | null;
+  location?: string; // Keep optional for backward compatibility if needed
   images: string[] | null;
   base_price: number;
   category: string;
   currency: string | null;
+  max_guests?: number;
+  bedrooms?: number;
+  beds?: number;
+  bathrooms?: number;
 }
 
 interface ScrollableSectionProps {
@@ -69,6 +76,7 @@ interface ScrollableSectionProps {
 }
 
 const ScrollableSection = ({ title, subtitle, properties, linkTo, bgClass = "", featured = false }: ScrollableSectionProps) => {
+  // ... existing logic ...
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {
@@ -96,6 +104,7 @@ const ScrollableSection = ({ title, subtitle, properties, linkTo, bgClass = "", 
   return (
     <section className={`py-6 md:py-10 ${bgClass}`}>
       <div className="container mx-auto px-4">
+        {/* ... existing header ... */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             {featured && <Star className="w-5 h-5 text-primary fill-primary" />}
@@ -130,18 +139,20 @@ const ScrollableSection = ({ title, subtitle, properties, linkTo, bgClass = "", 
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {properties.map((property) => (
-            <PropertyCard 
-              key={property.id} 
+            <PropertyCard
+              key={property.id}
               id={property.id}
               name={property.name}
-              location={property.location}
+              location={property.location || property.address || ""}
               image={property.images?.[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80"}
               pricePerNight={property.base_price}
               propertyType={getCategoryLabel(property.category)}
               rating={4.5}
-              maxGuests={4}
-              bedrooms={2}
-              compact 
+              maxGuests={property.max_guests || 2}
+              beds={property.beds || 1}
+              bathrooms={property.bathrooms || 1}
+              compact
+              className="min-w-[200px] sm:min-w-[220px] md:min-w-[260px]"
             />
           ))}
         </div>
@@ -151,7 +162,29 @@ const ScrollableSection = ({ title, subtitle, properties, linkTo, bgClass = "", 
 };
 
 const Index = () => {
+  const { user, requestHostRole, roles } = useAuth();
+  const navigate = useNavigate();
   const [activeBookingType, setActiveBookingType] = useState<BookingType>("daycation");
+
+  const handleBecomeHost = async () => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+
+    if (roles.includes("host")) {
+      navigate("/host");
+      return;
+    }
+
+    const { error } = await requestHostRole();
+    if (error) {
+      toast.error("Failed to become a host. Please try again.");
+    } else {
+      toast.success("You are now a host!");
+      navigate("/host");
+    }
+  };
 
   // Fetch main featured properties (separate from category featured)
   const { data: featuredProperties } = useQuery({
@@ -165,7 +198,7 @@ const Index = () => {
         .eq("is_featured_main", true)
         .order("featured_order_main", { ascending: true })
         .limit(10);
-      
+
       if (error) throw error;
       return data as PropertyData[];
     },
@@ -184,7 +217,7 @@ const Index = () => {
         .eq("category", "hourly")
         .order("featured_order_hourly", { ascending: true })
         .limit(10);
-      
+
       if (error) throw error;
       return data as PropertyData[];
     },
@@ -203,7 +236,7 @@ const Index = () => {
         .eq("category", "daycation")
         .order("featured_order_daycation", { ascending: true })
         .limit(10);
-      
+
       if (error) throw error;
       return data as PropertyData[];
     },
@@ -222,7 +255,7 @@ const Index = () => {
         .eq("category", "full_stay")
         .order("featured_order_full_stay", { ascending: true })
         .limit(10);
-      
+
       if (error) throw error;
       return data as PropertyData[];
     },
@@ -241,7 +274,7 @@ const Index = () => {
         .eq("category", "vibe_chill")
         .order("featured_order_vibe_chill", { ascending: true })
         .limit(10);
-      
+
       if (error) throw error;
       return data as PropertyData[];
     },
@@ -258,7 +291,7 @@ const Index = () => {
         .eq("status", "active")
         .eq("category", "hourly")
         .limit(8);
-      
+
       if (error) throw error;
       return data as PropertyData[];
     },
@@ -274,7 +307,7 @@ const Index = () => {
         .eq("status", "active")
         .eq("category", "daycation")
         .limit(8);
-      
+
       if (error) throw error;
       return data as PropertyData[];
     },
@@ -290,7 +323,7 @@ const Index = () => {
         .eq("status", "active")
         .eq("category", "full_stay")
         .limit(8);
-      
+
       if (error) throw error;
       return data as PropertyData[];
     },
@@ -306,7 +339,7 @@ const Index = () => {
         .eq("status", "active")
         .eq("category", "vibe_chill")
         .limit(8);
-      
+
       if (error) throw error;
       return data as PropertyData[];
     },
@@ -332,7 +365,7 @@ const Index = () => {
           <div className="absolute top-20 right-[15%] w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: "1s" }} />
           <div className="absolute top-40 right-[30%] w-1.5 h-1.5 bg-accent rounded-full animate-pulse" style={{ animationDelay: "1.5s" }} />
         </div>
-        
+
         {/* Decorative Gradient Orbs */}
         <div className="absolute top-10 left-0 w-[500px] h-[500px] bg-gradient-to-br from-primary/20 via-accent/10 to-transparent rounded-full blur-3xl -translate-x-1/2" />
         <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-gradient-to-tl from-accent/15 via-primary/10 to-transparent rounded-full blur-3xl translate-x-1/3" />
@@ -345,12 +378,12 @@ const Index = () => {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
               </span>
-              <span className="text-xs font-medium text-primary">500+ Properties Across Nepal</span>
+              <span className="text-xs font-medium text-primary">Premium Stays & Experiences</span>
             </div>
-            
+
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight animate-fade-up">
               Find Your Perfect
-              <span className="text-gradient block sm:inline"> Stay in Nepal</span>
+              <span className="text-gradient block sm:inline"> Stay</span>
             </h1>
 
             <p className="mt-4 md:mt-5 text-sm md:text-lg text-muted-foreground max-w-2xl mx-auto animate-fade-up leading-relaxed" style={{ animationDelay: "0.1s" }}>
@@ -457,15 +490,18 @@ const Index = () => {
                 List Your Property & Start Earning
               </h2>
               <p className="text-white/70 mb-4 text-xs md:text-sm">
-                Join hundreds of hosts across Nepal. Reach thousands of travelers.
+                Join hundreds of hosts. Reach thousands of travelers.
               </p>
               <div className="flex flex-col sm:flex-row gap-2 justify-center md:justify-start">
-                <Link to="/auth?mode=signup&role=host">
-                  <Button variant="hero" size="sm" className="w-full sm:w-auto text-xs h-9">
-                    Become a Host
-                    <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
-                  </Button>
-                </Link>
+                <Button
+                  onClick={handleBecomeHost}
+                  variant="hero"
+                  size="sm"
+                  className="w-full sm:w-auto text-xs h-9"
+                >
+                  Become a Host
+                  <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                </Button>
                 <Link to="/host-info">
                   <Button variant="hero-outline" size="sm" className="w-full sm:w-auto border-white/30 text-white hover:bg-white/10 text-xs h-9">
                     Learn More
@@ -478,10 +514,10 @@ const Index = () => {
       </section>
 
       <Footer />
-      
+
       {/* Bottom Navigation for Mobile */}
       <BottomNav />
-      
+
       {/* Add padding for bottom nav on mobile */}
       <div className="h-20 md:hidden" />
     </div>

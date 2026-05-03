@@ -16,17 +16,17 @@ const UserFavorites = () => {
         setFavorites(JSON.parse(stored));
       }
     };
-    
+
     loadFavorites();
-    
+
     // Listen for storage changes to update favorites in real-time
     const handleStorageChange = () => {
       loadFavorites();
     };
-    
+
     window.addEventListener("storage", handleStorageChange);
     window.addEventListener("favoritesUpdated", handleStorageChange);
-    
+
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("favoritesUpdated", handleStorageChange);
@@ -38,12 +38,12 @@ const UserFavorites = () => {
     queryKey: ["favoriteProperties", favorites],
     queryFn: async () => {
       if (favorites.length === 0) return [];
-      
+
       const { data, error } = await supabase
         .from("properties")
         .select("*")
         .in("id", favorites);
-      
+
       if (error) throw error;
       return data || [];
     },
@@ -53,7 +53,7 @@ const UserFavorites = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <main className="container mx-auto px-4 py-6 pb-24">
         <div className="space-y-6">
           <div>
@@ -88,8 +88,9 @@ const UserFavorites = () => {
                   image={property.images?.[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80"}
                   rating={4.8}
                   pricePerNight={property.base_price}
-                  maxGuests={4}
-                  bedrooms={2}
+                  maxGuests={property.max_guests || 2}
+                  beds={property.beds || 1}
+                  bathrooms={property.bathrooms || 1}
                   propertyType={property.category}
                 />
               ))}
@@ -97,7 +98,7 @@ const UserFavorites = () => {
           )}
         </div>
       </main>
-      
+
       <BottomNav />
     </div>
   );

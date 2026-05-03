@@ -1,11 +1,12 @@
 import HostLayout from "@/components/layout/HostLayout";
 import StatCard from "@/components/cards/StatCard";
-import { Building2, Calendar, Users, TrendingUp, Plus, Eye, Settings } from "lucide-react";
+import { Building2, Calendar, Users, TrendingUp, Plus, Eye, Settings, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { propertiesService } from "@/services/properties.service";
+import { bookingsService } from "@/services/bookings.service";
 
 const HostDashboard = () => {
   const { user } = useAuth();
@@ -14,16 +15,29 @@ const HostDashboard = () => {
     queryKey: ["host-properties", user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await supabase
-        .from("properties")
-        .select("*")
-        .eq("host_id", user.id)
-        .limit(4);
-      if (error) throw error;
-      return data;
+      return propertiesService.getHostProperties(user.id, 4);
     },
     enabled: !!user,
   });
+
+  const { data: hostBookings = [] } = useQuery({
+    queryKey: ["host-bookings-stats", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      return bookingsService.getHostBookings(user.id);
+    },
+    enabled: !!user,
+  });
+
+  const now = new Date();
+  const activeBookings = hostBookings.filter(b =>
+    b.booking_status === 'confirmed' &&
+    (new Date(b.check_in_date) <= now && new Date(b.check_out_date) > now)
+  ).length;
+
+  const upcomingCheckins = hostBookings.filter(b =>
+    new Date(b.check_in_date) > now && b.booking_status === 'confirmed'
+  ).length;
 
   return (
     <HostLayout>
@@ -56,19 +70,19 @@ const HostDashboard = () => {
           />
           <StatCard
             title="Active Bookings"
-            value={0}
+            value={activeBookings}
             icon={Calendar}
             iconColor="text-success"
           />
           <StatCard
             title="Upcoming Check-ins"
-            value={0}
+            value={upcomingCheckins}
             icon={Users}
             iconColor="text-accent"
           />
           <StatCard
             title="Avg Occupancy"
-            value="0%"
+            value="N/A"
             icon={TrendingUp}
             iconColor="text-warning"
           />
@@ -84,7 +98,7 @@ const HostDashboard = () => {
               </Button>
             </Link>
           </div>
-          
+
           {properties.length === 0 ? (
             <div className="bg-card rounded-xl border border-border p-8 text-center">
               <Building2 className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -122,13 +136,15 @@ const HostDashboard = () => {
                       <div className="flex items-start justify-between">
                         <div>
                           <h3 className="font-semibold text-card-foreground">{property.name}</h3>
-                          <p className="text-sm text-muted-foreground">{property.location}</p>
+                          <div className="flex items-center text-sm text-muted-foreground mt-1">
+                            <MapPin className="w-4 h-4 mr-1" />
+                            {property.city}, {property.address}
+                          </div>
                         </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          property.status === "active" 
-                            ? "bg-success/10 text-success" 
-                            : "bg-muted text-muted-foreground"
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${property.status === "active"
+                          ? "bg-success/10 text-success"
+                          : "bg-muted text-muted-foreground"
+                          }`}>
                           {property.status}
                         </span>
                       </div>
@@ -137,17 +153,18 @@ const HostDashboard = () => {
                           {property.category.replace("_", " ")}
                         </span>
                         <span className="text-sm text-muted-foreground">
-                          NPR {property.base_price}
+                          NPR {property.price_per_night}
                         </span>
                       </div>
                       <div className="mt-3 flex items-center gap-2">
-                        <Link to={`/host/properties/${property.id}`}>
+                        <Link to={`/property/${property.id}`}>
                           <Button size="sm" variant="outline">
                             <Eye className="w-3 h-3 mr-1" />
                             View
                           </Button>
                         </Link>
-                        <Link to={`/host/properties/${property.id}/edit`}>
+                        {/* Manage link temporarily disabled or redirected until Edit page is built */}
+                        <Link to={`/host/properties`}>
                           <Button size="sm" variant="ghost">
                             <Settings className="w-3 h-3 mr-1" />
                             Manage

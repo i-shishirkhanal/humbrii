@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/layout/Navbar";
 import BottomNav from "@/components/layout/BottomNav";
 import StatCard from "@/components/cards/StatCard";
@@ -6,39 +8,52 @@ import { Calendar, MapPin, CreditCard, Star, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-
-const mockBookings = [
-  {
-    id: "1",
-    propertyName: "Himalayan View Resort",
-    propertyImage: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80",
-    location: "Pokhara, Nepal",
-    checkIn: "Dec 25, 2024",
-    checkOut: "Dec 28, 2024",
-    status: "confirmed" as const,
-    totalAmount: 25500,
-    bookingType: "full_stay" as const,
-  },
-  {
-    id: "2",
-    propertyName: "Heritage Boutique Hotel",
-    propertyImage: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&q=80",
-    location: "Bhaktapur, Nepal",
-    checkIn: "Jan 5, 2025",
-    checkOut: "Jan 6, 2025",
-    status: "pending" as const,
-    totalAmount: 6200,
-    bookingType: "daycation" as const,
-  },
-];
+// Define types
+interface Booking {
+  id: string;
+  created_at: string;
+  total_amount: number;
+  status: string;
+  check_in: string;
+  check_out: string;
+  properties: {
+    name: string;
+    images: string[];
+    city: string;
+    category: string;
+  };
+}
 
 const UserActivities = () => {
-  const { profile } = useAuth();
+  const { user } = useAuth();
+
+  /* Fetch live bookings */
+  const { data: bookings, isLoading } = useQuery({
+    queryKey: ["user-activities"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("*, properties(*)")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data as unknown as Booking[];
+    },
+    enabled: !!user,
+  });
+
+  const now = new Date();
+
+  const upcomingBookings = bookings?.filter(b => new Date(b.check_in) > now && b.status !== 'cancelled') || [];
+  const pastBookings = bookings?.filter(b => new Date(b.check_out) < now && b.status === 'completed') || [];
+  const totalSpent = bookings
+    ?.filter(b => b.status === 'confirmed' || b.status === 'completed')
+    .reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0) || 0;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <main className="pt-20 pb-24 md:pb-8">
         <div className="container mx-auto px-4">
           {/* Back Button */}
@@ -70,25 +85,25 @@ const UserActivities = () => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
                 title="Upcoming Bookings"
-                value={2}
+                value={upcomingBookings.length}
                 icon={Calendar}
                 iconColor="text-primary"
               />
               <StatCard
                 title="Past Stays"
-                value={8}
+                value={pastBookings.length}
                 icon={MapPin}
                 iconColor="text-success"
               />
               <StatCard
                 title="Total Spent"
-                value="NPR 85,400"
+                value={`NPR ${totalSpent.toLocaleString()}`}
                 icon={CreditCard}
                 iconColor="text-accent"
               />
               <StatCard
                 title="Avg Rating Given"
-                value="4.7"
+                value="N/A"
                 icon={Star}
                 iconColor="text-warning"
               />
@@ -105,9 +120,26 @@ const UserActivities = () => {
                 </Link>
               </div>
               <div className="space-y-4">
-                {mockBookings.map((booking) => (
-                  <BookingCard key={booking.id} {...booking} />
-                ))}
+                {isLoading ? (
+                  <p className="text-muted-foreground">Loading...</p>
+                ) : bookings?.length === 0 ? (
+                  <p className="text-muted-foreground">No bookings found</p>
+                ) : (
+                  bookings?.slice(0, 3).map((booking) => (
+                    <BookingCard
+                      key={booking.id}
+                      id={booking.id}
+                      propertyName={booking.properties?.name || "Unknown Property"}
+                      propertyImage={booking.properties?.images?.[0]}
+                      location={booking.properties?.city || "Unknown Location"}
+                      checkIn={new Date(booking.check_in).toLocaleDateString()}
+                      checkOut={new Date(booking.check_out).toLocaleDateString()}
+                      status={booking.status}
+                      totalAmount={booking.total_amount}
+                      bookingType={booking.properties?.category || "full_stay"}
+                    />
+                  ))
+                )}
               </div>
             </div>
 
@@ -131,10 +163,10 @@ const UserActivities = () => {
             </div>
           </div>
         </div>
-      </main>
+      </main >
 
       <BottomNav />
-    </div>
+    </div >
   );
 };
 

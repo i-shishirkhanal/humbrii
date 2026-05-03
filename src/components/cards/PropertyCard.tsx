@@ -13,9 +13,11 @@ interface PropertyCardProps {
   rating: number;
   pricePerNight: number;
   maxGuests: number;
-  bedrooms: number;
+  beds: number;
+  bathrooms: number;
   propertyType: string;
   compact?: boolean;
+  className?: string;
 }
 
 const PropertyCard = ({
@@ -26,9 +28,11 @@ const PropertyCard = ({
   rating,
   pricePerNight,
   maxGuests,
-  bedrooms,
+  beds,
+  bathrooms,
   propertyType,
   compact = false,
+  className,
 }: PropertyCardProps) => {
   const [isFavorite, setIsFavorite] = useState(false);
 
@@ -40,9 +44,9 @@ const PropertyCard = ({
   const toggleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
-    
+
     if (isFavorite) {
       const index = favorites.indexOf(id);
       if (index > -1) favorites.splice(index, 1);
@@ -51,10 +55,10 @@ const PropertyCard = ({
       favorites.push(id);
       toast.success("Added to favorites");
     }
-    
+
     localStorage.setItem("favorites", JSON.stringify(favorites));
     setIsFavorite(!isFavorite);
-    
+
     // Dispatch custom event to notify favorites page
     window.dispatchEvent(new Event("favoritesUpdated"));
   };
@@ -63,7 +67,7 @@ const PropertyCard = ({
     <Link to={`/property/${id}`}>
       <div className={cn(
         "group bg-card rounded-xl overflow-hidden shadow-soft border border-border hover:shadow-strong transition-all duration-300 hover:-translate-y-1",
-        compact && "min-w-[200px] sm:min-w-[220px] md:min-w-[260px]"
+        className
       )}>
         {/* Image */}
         <div className={cn(
@@ -85,8 +89,8 @@ const PropertyCard = ({
               onClick={toggleFavorite}
               className={cn(
                 "w-7 h-7 rounded-full flex items-center justify-center transition-all",
-                isFavorite 
-                  ? "bg-primary text-primary-foreground" 
+                isFavorite
+                  ? "bg-primary text-primary-foreground"
                   : "bg-background/90 backdrop-blur-sm hover:bg-background text-foreground"
               )}
             >
@@ -118,7 +122,10 @@ const PropertyCard = ({
               </div>
               <div className="flex items-center gap-1">
                 <Bed className="w-3.5 h-3.5" />
-                <span>{bedrooms} beds</span>
+                <span>{beds} {beds === 1 ? 'bed' : 'beds'}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-xs">{bathrooms} bath</span>
               </div>
             </div>
           )}
@@ -132,7 +139,10 @@ const PropertyCard = ({
                 "font-bold text-card-foreground",
                 compact ? "text-sm" : "text-base sm:text-lg md:text-xl"
               )}>NPR {pricePerNight.toLocaleString()}</span>
-              <span className="text-[10px] sm:text-xs text-muted-foreground">/night</span>
+              <span className="text-[10px] sm:text-xs text-muted-foreground">/
+                {(propertyType === "hourly" || propertyType === "Hourly" || propertyType === "vibe_chill" || propertyType === "Vibe & Chill") ? "hour" :
+                  (propertyType === "daycation" || propertyType === "Daycation") ? "day" : "night"}
+              </span>
             </div>
             {!compact && <Button size="sm" className="text-xs h-8">Book Now</Button>}
           </div>

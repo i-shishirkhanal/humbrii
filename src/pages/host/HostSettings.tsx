@@ -58,7 +58,7 @@ const HostSettings = () => {
   const addMethodMutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Not authenticated");
-      
+
       const payload = {
         host_id: user.id,
         method_type: methodType,
@@ -66,11 +66,17 @@ const HostSettings = () => {
         ...(methodType === "esewa" ? esewaData : bankData),
       };
 
+      console.log("Adding payment method, User ID:", user.id);
+      console.log("Payload:", payload);
+
       const { error } = await supabase
         .from("host_payout_methods")
         .upsert(payload, { onConflict: "host_id,method_type" });
-      
-      if (error) throw error;
+
+      if (error) {
+        console.error("Supabase payment add error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payout-methods"] });
@@ -79,8 +85,9 @@ const HostSettings = () => {
       setEsewaData({ esewa_id: "", esewa_phone: "" });
       setBankData({ bank_name: "", bank_account_number: "", bank_account_holder: "", bank_branch: "" });
     },
-    onError: () => {
-      toast.error("Failed to add payment method");
+    onError: (error) => {
+      console.error("Payment method error:", error);
+      toast.error(`Failed to add payment method: ${error.message}`);
     },
   });
 
@@ -133,7 +140,7 @@ const HostSettings = () => {
             <CreditCard className="w-5 h-5 text-primary" />
             <h2 className="text-lg font-semibold text-card-foreground">Payout Settings</h2>
           </div>
-          
+
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -236,8 +243,8 @@ const HostSettings = () => {
                       </>
                     )}
 
-                    <Button 
-                      onClick={handleAddMethod} 
+                    <Button
+                      onClick={handleAddMethod}
                       className="w-full"
                       disabled={addMethodMutation.isPending}
                     >
@@ -263,8 +270,8 @@ const HostSettings = () => {
                       <p className="text-sm text-muted-foreground">{esewaMethod.esewa_phone}</p>
                     </div>
                   </div>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     onClick={() => deleteMethodMutation.mutate(esewaMethod.id)}
                   >
@@ -284,8 +291,8 @@ const HostSettings = () => {
                       <p className="text-sm text-muted-foreground">****{bankMethod.bank_account_number?.slice(-4)}</p>
                     </div>
                   </div>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     onClick={() => deleteMethodMutation.mutate(bankMethod.id)}
                   >
@@ -393,8 +400,8 @@ const HostSettings = () => {
                         </>
                       )}
 
-                      <Button 
-                        onClick={handleAddMethod} 
+                      <Button
+                        onClick={handleAddMethod}
                         className="w-full"
                         disabled={addMethodMutation.isPending}
                       >

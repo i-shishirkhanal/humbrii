@@ -46,6 +46,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { propertiesService } from "@/services/properties.service";
 
 const CATEGORIES = ["hourly", "daycation", "full_stay", "vibe_chill"] as const;
 
@@ -76,14 +77,14 @@ const AdminProperties = () => {
   const [categoryTab, setCategoryTab] = useState<string>("all");
   const queryClient = useQueryClient();
 
-  const { data: properties, isLoading } = useQuery({
+  const { data: properties, isLoading, isError, error: queryError } = useQuery({
     queryKey: ["admin-properties"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("properties")
         .select("*")
         .order("created_at", { ascending: false });
-      
+
       if (error) throw error;
       return data;
     },
@@ -91,37 +92,29 @@ const AdminProperties = () => {
 
   const updatePropertyMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Record<string, unknown> }) => {
-      const { error } = await supabase
-        .from("properties")
-        .update(updates)
-        .eq("id", id);
-      
-      if (error) throw error;
+      await propertiesService.adminUpdateProperty(id, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-properties"] });
       toast.success("Property updated successfully");
     },
-    onError: () => {
-      toast.error("Failed to update property");
+    onError: (error) => {
+      console.error(error);
+      toast.error(error.message || "Failed to update property");
     },
   });
 
   const deletePropertyMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("properties")
-        .delete()
-        .eq("id", id);
-      
-      if (error) throw error;
+      await propertiesService.adminDeleteProperty(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-properties"] });
       toast.success("Property deleted successfully");
       setDeletePropertyId(null);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error(error);
       toast.error("Failed to delete property");
     },
   });
@@ -131,12 +124,12 @@ const AdminProperties = () => {
   };
 
   const handleSuspend = (id: string) => {
-    updatePropertyMutation.mutate({ 
-      id, 
-      updates: { 
-        status: "suspended", 
-        is_published: false, 
-        is_featured: false, 
+    updatePropertyMutation.mutate({
+      id,
+      updates: {
+        status: "suspended",
+        is_published: false,
+        is_featured: false,
         featured_order: null,
         is_featured_main: false,
         featured_order_main: null,
@@ -148,7 +141,7 @@ const AdminProperties = () => {
         featured_order_full_stay: null,
         is_featured_vibe_chill: false,
         featured_order_vibe_chill: null,
-      } 
+      }
     });
   };
 
@@ -158,7 +151,7 @@ const AdminProperties = () => {
 
   const handleOpenFeatureDialog = (property: any) => {
     setSelectedProperty(property);
-    
+
     // Set initial states based on current featured status
     const sections: FeaturedSection[] = [];
     const orders: Record<FeaturedSection, string> = {
@@ -197,7 +190,7 @@ const AdminProperties = () => {
 
   const handleFeatureProperty = () => {
     if (!selectedProperty) return;
-    
+
     const updates: Record<string, unknown> = {
       is_featured_main: selectedSections.includes("main"),
       featured_order_main: selectedSections.includes("main") ? parseInt(sectionOrders.main) : null,
@@ -214,6 +207,7 @@ const AdminProperties = () => {
       featured_order: selectedSections.includes("main") ? parseInt(sectionOrders.main) : null,
     };
 
+    console.log("Sending updates:", updates);
     updatePropertyMutation.mutate({ id: selectedProperty.id, updates });
     setFeatureDialogOpen(false);
     setSelectedProperty(null);
@@ -222,7 +216,7 @@ const AdminProperties = () => {
 
   const handleRemoveFromSection = (id: string, section: FeaturedSection) => {
     const updates: Record<string, unknown> = {};
-    
+
     switch (section) {
       case "main":
         updates.is_featured_main = false;
@@ -251,7 +245,7 @@ const AdminProperties = () => {
 
   const handleUpdateSectionOrder = (id: string, section: FeaturedSection, newOrder: number) => {
     const updates: Record<string, unknown> = {};
-    
+
     switch (section) {
       case "main":
         updates.featured_order_main = newOrder;
@@ -278,8 +272,8 @@ const AdminProperties = () => {
   };
 
   const toggleSection = (section: FeaturedSection) => {
-    setSelectedSections(prev => 
-      prev.includes(section) 
+    setSelectedSections(prev =>
+      prev.includes(section)
         ? prev.filter(s => s !== section)
         : [...prev, section]
     );
@@ -296,16 +290,16 @@ const AdminProperties = () => {
   };
 
   const isPropertyFeaturedAnywhere = (property: any): boolean => {
-    return property.is_featured_main || property.is_featured_hourly || property.is_featured_daycation || 
-           property.is_featured_full_stay || property.is_featured_vibe_chill;
+    return property.is_featured_main || property.is_featured_hourly || property.is_featured_daycation ||
+      property.is_featured_full_stay || property.is_featured_vibe_chill;
   };
 
   const filteredProperties = properties?.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.location.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesCategory = categoryTab === "all" || p.category === categoryTab;
-    
+
     if (statusFilter === "featured") {
       return matchesSearch && matchesCategory && isPropertyFeaturedAnywhere(p);
     }
@@ -347,7 +341,7 @@ const AdminProperties = () => {
   // Get featured properties by section
   const getFeaturedBySection = (section: FeaturedSection) => {
     if (!properties) return [];
-    
+
     switch (section) {
       case "main":
         return properties.filter(p => p.is_featured_main).sort((a, b) => (a.featured_order_main || 999) - (b.featured_order_main || 999));
@@ -401,10 +395,10 @@ const AdminProperties = () => {
                   <div className="space-y-1">
                     {featuredList.slice(0, 3).map((p, idx) => {
                       const order = key === "main" ? p.featured_order_main :
-                                   key === "hourly" ? p.featured_order_hourly :
-                                   key === "daycation" ? p.featured_order_daycation :
-                                   key === "full_stay" ? p.featured_order_full_stay :
-                                   p.featured_order_vibe_chill;
+                        key === "hourly" ? p.featured_order_hourly :
+                          key === "daycation" ? p.featured_order_daycation :
+                            key === "full_stay" ? p.featured_order_full_stay :
+                              p.featured_order_vibe_chill;
                       return (
                         <div key={p.id} className="flex items-center gap-2 text-xs">
                           <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center font-medium">
@@ -495,6 +489,7 @@ const AdminProperties = () => {
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Property</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Host</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Category</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Price</th>
                   <th className="text-left p-4 text-sm font-medium text-muted-foreground">Status</th>
@@ -504,7 +499,13 @@ const AdminProperties = () => {
                 </tr>
               </thead>
               <tbody>
-                {isLoading ? (
+                {isError ? (
+                  <tr>
+                    <td colSpan={8} className="p-8 text-center text-destructive">
+                      Error loading properties: {String(queryError)}
+                    </td>
+                  </tr>
+                ) : isLoading ? (
                   <tr>
                     <td colSpan={7} className="p-8 text-center text-muted-foreground">
                       Loading properties...
@@ -549,6 +550,33 @@ const AdminProperties = () => {
                           </div>
                         </td>
                         <td className="p-4">
+                          {property.host && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-muted overflow-hidden flex-shrink-0">
+                                {property.host.avatar_url ? (
+                                  <img
+                                    src={property.host.avatar_url}
+                                    alt={property.host.full_name || property.host.username || "Host"}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary text-xs font-bold">
+                                    {(property.host.full_name || property.host.username || "H")?.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium text-foreground">
+                                  {property.host.full_name || "Unknown"}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  @{property.host.username || "unknown"}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryBadge(property.category)}`}>
                             {getCategoryLabel(property.category)}
                           </span>
@@ -563,7 +591,7 @@ const AdminProperties = () => {
                           <div className="flex flex-wrap gap-1">
                             <Badge variant={
                               property.status === "active" ? "default" :
-                              property.status === "suspended" ? "destructive" : "secondary"
+                                property.status === "suspended" ? "destructive" : "secondary"
                             }>
                               {property.status}
                             </Badge>
@@ -631,7 +659,7 @@ const AdminProperties = () => {
                                   </DropdownMenuSubTrigger>
                                   <DropdownMenuSubContent>
                                     {featuredSections.map(({ section }) => (
-                                      <DropdownMenuItem 
+                                      <DropdownMenuItem
                                         key={section}
                                         onClick={() => handleRemoveFromSection(property.id, section)}
                                       >
@@ -655,7 +683,7 @@ const AdminProperties = () => {
                                         </DropdownMenuSubTrigger>
                                         <DropdownMenuSubContent>
                                           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                                            <DropdownMenuItem 
+                                            <DropdownMenuItem
                                               key={num}
                                               onClick={() => handleUpdateSectionOrder(property.id, section, num)}
                                               className={order === num ? "bg-primary/10" : ""}
@@ -671,7 +699,7 @@ const AdminProperties = () => {
                               )}
                               <DropdownMenuSeparator />
                               {property.status !== "suspended" && (
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onClick={() => handleSuspend(property.id)}
                                   className="text-warning"
                                 >
@@ -679,7 +707,7 @@ const AdminProperties = () => {
                                   Suspend
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={() => setDeletePropertyId(property.id)}
                                 className="text-destructive"
                               >
@@ -712,12 +740,12 @@ const AdminProperties = () => {
             {FEATURED_SECTIONS.map(({ key, label, categoryFilter }) => {
               const isEnabled = selectedProperty && canFeatureInSection(selectedProperty, key);
               const isSelected = selectedSections.includes(key);
-              
+
               return (
                 <div key={key} className={`space-y-2 p-3 rounded-lg border ${isSelected ? 'border-primary bg-primary/5' : 'border-border'} ${!isEnabled ? 'opacity-50' : ''}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <Checkbox 
+                      <Checkbox
                         id={key}
                         checked={isSelected}
                         onCheckedChange={() => isEnabled && toggleSection(key)}
@@ -736,8 +764,8 @@ const AdminProperties = () => {
                   {isSelected && (
                     <div className="ml-6 flex items-center gap-2">
                       <Label className="text-xs text-muted-foreground">Position:</Label>
-                      <Select 
-                        value={sectionOrders[key]} 
+                      <Select
+                        value={sectionOrders[key]}
                         onValueChange={(val) => setSectionOrders(prev => ({ ...prev, [key]: val }))}
                       >
                         <SelectTrigger className="w-24 h-8">
@@ -778,7 +806,7 @@ const AdminProperties = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => deletePropertyId && handleDelete(deletePropertyId)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
